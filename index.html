@@ -128,6 +128,11 @@
   }
   .cell.empty { border: none; background: transparent; min-height: 0; }
   .cell.out { opacity: .3; background: transparent; }
+  .cell.past { min-height: 42px; opacity: .55; }
+  .cell.past .note-text { display: none; }
+  .cell.past .time { display: none; }
+  .cell.past .note-dot { display: none; }
+  .cell.past .resolve { display: none; }
   .cell.active { cursor: pointer; }
   .cell.active:hover { transform: translateY(-2px); box-shadow: 0 6px 16px var(--shadow); z-index: 2; }
 
@@ -273,6 +278,16 @@
   .modal-actions .right { display: flex; gap: 10px; margin-left: auto; }
   .btn-del { background: transparent; color: var(--a); border-color: var(--a-line); }
   .btn-del:hover { background: var(--a); color: #fff; }
+  .auth-err { color: #c0392b; font-size: 13px; margin: 8px 0 0; }
+  .auth-toggle { font-size: 13.5px; color: var(--muted); margin-top: 14px; }
+  .auth-toggle a { color: var(--b); cursor: pointer; text-decoration: underline; }
+  .auth-toggle a:hover { color: var(--ink); }
+  .auth-loading { text-align: center; padding: 60px 20px; font-family: 'Fraunces', serif; font-size: 16px; color: var(--muted); }
+  .user-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'Fraunces', serif; font-size: 13px; font-weight: 500;
+    max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
 
   /* ---------- Mobile: tablets ---------- */
   @media (max-width: 768px) {
@@ -306,6 +321,7 @@
     .dow { font-size: 9px; }
     .grid { gap: 3px; }
     .cell { min-height: 64px; padding: 4px 5px; font-size: 10px; border-radius: 6px; }
+    .cell.past { min-height: 36px; }
     .daynum { font-size: 12px; }
     .tag { font-size: 7.5px; padding: 1px 4px; letter-spacing: .01em; }
     .tag-trans { font-size: 7px; }
@@ -329,6 +345,7 @@
   /* ---------- Mobile: small phones ---------- */
   @media (max-width: 360px) {
     .cell { min-height: 54px; padding: 3px 4px; }
+    .cell.past { min-height: 30px; }
     .daynum { font-size: 11px; }
     .tag { font-size: 7px; padding: 0px 3px; }
     .time { font-size: 9px; }
@@ -355,8 +372,13 @@
 
 const SB_URL = "https://tzucmfvivnnqbvkgwqif.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6dWNtZnZpdm5ucWJ2a2d3cWlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNDM1NTAsImV4cCI6MjA4NzYxOTU1MH0.Z7SPTehhd-5tzatpy5tJIlF8X0G5Ax7waR3a43U2f4Q";
-const SB_HEADERS = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "return=minimal" };
-const STORE_VIEWER = "coparent.viewer.v1";
+const SB_HEADERS_ANON = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "return=minimal" };
+function sbHeaders() {
+  const tok = authSession?.access_token;
+  return tok
+    ? { "apikey": SB_KEY, "Authorization": "Bearer " + tok, "Content-Type": "application/json", "Prefer": "return=minimal" }
+    : SB_HEADERS_ANON;
+}
 
 const RANGE_START = "2026-05-25";   // Memorial Day 2026
 const RANGE_END   = "2026-09-07";   // Labor Day 2026
@@ -428,24 +450,91 @@ const SEED = {
   "2026-07-29":{parent:null,notes:"Des's birthday."}
 };
 
-// ---------- State ----------
+// ---------- Auth State ----------
+let authSession = null;   // { access_token, refresh_token, user: { email, ... } }
+let authUser = null;       // shorthand for authSession.user
+let viewer = null;         // display name derived from email
+
+// ---------- App State ----------
 let data = structuredClone(SEED);
 let log  = [];
-let viewer = null;
 let editingKey = null;
 let signingIn = false;
 let ready = false;
 let _saving = false;
 
-// Viewer name is the only thing stored locally (per-device identity)
-function loadViewer() {
-  try { const r = localStorage.getItem(STORE_VIEWER); if (r) return r; } catch(e){}
+const TODAY = new Date().toISOString().slice(0,10);  // YYYY-MM-DD
+
+function loadSession() {
+  try { const r = localStorage.getItem("cocal.session"); if (r) return JSON.parse(r); } catch(e){}
   return null;
 }
-function saveViewer(name) {
-  try { if (name) localStorage.setItem(STORE_VIEWER, name); else localStorage.removeItem(STORE_VIEWER); } catch(e){}
+function saveSession(s) {
+  try { if (s) localStorage.setItem("cocal.session", JSON.stringify(s)); else localStorage.removeItem("cocal.session"); } catch(e){}
 }
-viewer = loadViewer();
+
+function setAuthFrom(session) {
+  authSession = session;
+  authUser = session?.user || null;
+  viewer = authUser?.user_metadata?.display_name || authUser?.email?.split("@")[0] || null;
+  saveSession(session);
+}
+
+async function refreshToken() {
+  const stored = loadSession();
+  if (!stored?.refresh_token) return false;
+  try {
+    const res = await fetch(SB_URL + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST",
+      headers: { "apikey": SB_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: stored.refresh_token })
+    });
+    if (!res.ok) { saveSession(null); return false; }
+    const session = await res.json();
+    setAuthFrom(session);
+    return true;
+  } catch(e) { return false; }
+}
+
+async function signUp(email, password, displayName) {
+  const res = await fetch(SB_URL + "/auth/v1/signup", {
+    method: "POST",
+    headers: { "apikey": SB_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, data: { display_name: displayName } })
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.msg || body.error_description || body.message || "Sign-up failed");
+  // Supabase auto-confirms if email confirmation is disabled; otherwise body has no session
+  if (body.access_token) {
+    setAuthFrom(body);
+    return true;
+  }
+  // If email confirmation is required, sign in immediately (works when confirm is off)
+  return await signIn(email, password);
+}
+
+async function signIn(email, password) {
+  const res = await fetch(SB_URL + "/auth/v1/token?grant_type=password", {
+    method: "POST",
+    headers: { "apikey": SB_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.msg || body.error_description || body.message || "Sign-in failed");
+  setAuthFrom(body);
+  return true;
+}
+
+async function signOut() {
+  if (authSession?.access_token) {
+    fetch(SB_URL + "/auth/v1/logout", {
+      method: "POST",
+      headers: { "apikey": SB_KEY, "Authorization": "Bearer " + authSession.access_token }
+    }).catch(()=>{});
+  }
+  authSession = null; authUser = null; viewer = null;
+  saveSession(null);
+}
 
 // ---- Remote persistence (Supabase only) ----
 let _syncTimer = null;
@@ -457,7 +546,7 @@ function syncToRemote() {
     try {
       await fetch(SB_URL + "/rest/v1/cocal?id=eq.main", {
         method: "PATCH",
-        headers: SB_HEADERS,
+        headers: sbHeaders(),
         body: JSON.stringify({ data, log, updated_at: new Date().toISOString() })
       });
     } catch(e) { console.error("sync failed", e); }
@@ -475,8 +564,9 @@ function addLog(text) {
 
 async function loadFromRemote() {
   try {
+    const h = sbHeaders();
     const res = await fetch(SB_URL + "/rest/v1/cocal?id=eq.main&select=data,log", {
-      headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+      headers: { "apikey": h.apikey, "Authorization": h.Authorization }
     });
     const rows = await res.json();
     if (rows.length && rows[0].data && Object.keys(rows[0].data).length) {
@@ -486,7 +576,7 @@ async function loadFromRemote() {
       // First ever load — push seed data to remote
       await fetch(SB_URL + "/rest/v1/cocal?id=eq.main", {
         method: "PATCH",
-        headers: SB_HEADERS,
+        headers: sbHeaders(),
         body: JSON.stringify({ data, log: [{ ts: Date.now(), text: "Initial summer schedule created." }], updated_at: new Date().toISOString() })
       });
       log = [{ ts: Date.now(), text: "Initial summer schedule created." }];
@@ -716,7 +806,7 @@ function render(){
 
     <div class="toolbar">
       <button class="btn btn-primary" id="ics">⤓ Add to calendar (.ics)</button>
-      <button class="btn" id="viewer">${viewer ? `Viewing as <b style="margin-left:4px">${escapeHtml(viewer)}</b>` : "Sign in"}</button>
+      <button class="btn" id="viewer">${authUser ? `<span class="user-pill">👤 ${escapeHtml(viewer)}</span>` : "Sign in"}</button>
       <span class="spacer"></span>
       <button class="btn btn-ghost" id="reset" title="Reset to original schedule">Reset</button>
     </div>
@@ -768,8 +858,9 @@ function render(){
       // Gradient only for direct B↔A transitions
       const showGradient = isTrans && t.to !== "BA" && t.to !== "TBD";
 
+      const isPast = k < TODAY;
       const pcls = e&&e.parent==="B"?"c-b":e&&e.parent==="A"?"c-a":e&&e.parent==="BA"?"c-ba":e&&e.parent==="TBD"?"c-tbd":"c-none";
-      const cls = ["cell", active?"active":"out", pcls, unres?"c-unres":"", showGradient?"c-trans":""].join(" ");
+      const cls = ["cell", active?"active":"out", pcls, unres?"c-unres":"", showGradient?"c-trans":"", isPast?"past":""].join(" ");
 
       const cell = el(`<div class="${cls}" tabindex="${active?0:-1}"></div>`);
 
@@ -846,64 +937,103 @@ function render(){
 function escapeHtml(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 function renderSignIn(){
-  if (document.querySelector(".backdrop")) return;   // already open
-  const isFirst = !viewer;
-  const backdrop = el(`<div class="backdrop"></div>`);
-  const modal = el(`
-    <div class="modal">
-      <h3>${isFirst ? "Who's viewing?" : "Switch viewer"}</h3>
-      <p class="signin-sub">Your name appears on every change you make in the changelog. Saved on this device only.</p>
-      <label class="flabel">Quick pick</label>
-      <div class="pick">
-        <button class="pp pickname" data-name="Bobby">Bobby</button>
-        <button class="pp pickname" data-name="Allie">Allie</button>
-      </div>
-      <label class="flabel">Or type a name</label>
-      <input class="inp" id="vname" placeholder="e.g. Charlie, Grandma, guest" value="${escapeHtml(viewer || "")}" />
-      <div class="modal-actions">
-        ${viewer ? `<button class="btn btn-del" id="vclear">Sign out</button>` : ""}
-        <div class="right">
-          ${isFirst ? "" : `<button class="btn btn-ghost" id="vcancel">Cancel</button>`}
-          <button class="btn btn-primary" id="vsave">Continue</button>
+  if (document.querySelector(".backdrop")) return;
+  const isLoggedIn = !!authUser;
+  let isSignUp = false;
+
+  function buildModal() {
+    return isLoggedIn ? `
+      <div class="modal">
+        <h3>Account</h3>
+        <p class="signin-sub">Signed in as <b>${escapeHtml(authUser.email)}</b></p>
+        <div class="modal-actions">
+          <button class="btn btn-del" id="auth-logout">Sign out</button>
+          <div class="right"><button class="btn btn-ghost" id="auth-cancel">Close</button></div>
         </div>
       </div>
-    </div>
-  `);
-  backdrop.appendChild(modal);
-  document.body.appendChild(backdrop);
+    ` : `
+      <div class="modal">
+        <h3>${isSignUp ? "Create account" : "Sign in"}</h3>
+        <p class="signin-sub">${isSignUp ? "Create an account to edit the calendar." : "Sign in to view and edit the calendar."}</p>
+        ${isSignUp ? `
+          <label class="flabel">Display name</label>
+          <input class="inp" id="auth-name" placeholder="e.g. Bobby, Allie, Grandma" autocomplete="name" />
+        ` : ""}
+        <label class="flabel">Email</label>
+        <input class="inp" id="auth-email" type="email" placeholder="you@example.com" autocomplete="email" />
+        <label class="flabel">Password</label>
+        <input class="inp" id="auth-pass" type="password" placeholder="${isSignUp ? "Choose a password (6+ chars)" : "Your password"}" autocomplete="${isSignUp ? "new-password" : "current-password"}" />
+        <div id="auth-err"></div>
+        <div class="modal-actions">
+          <div class="right" style="margin-left:0;width:100%;display:flex;flex-direction:column;gap:8px;">
+            <button class="btn btn-primary" id="auth-submit" style="width:100%;justify-content:center;">${isSignUp ? "Create account" : "Sign in"}</button>
+            <p class="auth-toggle">${isSignUp
+              ? 'Already have an account? <a id="auth-switch">Sign in</a>'
+              : 'No account? <a id="auth-switch">Create one</a>'}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 
-  const inp = modal.querySelector("#vname");
-  setTimeout(()=>inp.focus(), 30);
+  const backdrop = el(`<div class="backdrop"></div>`);
+  function mount() {
+    const existing = backdrop.querySelector(".modal");
+    if (existing) existing.remove();
+    const modal = el(buildModal());
+    backdrop.appendChild(modal);
 
-  modal.querySelectorAll(".pickname").forEach(b=>{
-    b.addEventListener("click", () => { inp.value = b.getAttribute("data-name"); });
-  });
+    if (isLoggedIn) {
+      modal.querySelector("#auth-cancel").addEventListener("click", close);
+      modal.querySelector("#auth-logout").addEventListener("click", async () => {
+        const prev = viewer;
+        await signOut();
+        if (prev) addLog("Signed out (was " + prev + ").");
+        close(); signingIn = true; render();
+      });
+    } else {
+      const emailInp = modal.querySelector("#auth-email");
+      const passInp = modal.querySelector("#auth-pass");
+      const nameInp = modal.querySelector("#auth-name");
+      const errDiv = modal.querySelector("#auth-err");
+      const submitBtn = modal.querySelector("#auth-submit");
+      setTimeout(() => (nameInp || emailInp).focus(), 30);
+
+      const submit = async () => {
+        const email = emailInp.value.trim();
+        const pass = passInp.value;
+        const name = nameInp ? nameInp.value.trim() : "";
+        if (!email || !pass) { errDiv.innerHTML = '<p class="auth-err">Please fill in all fields.</p>'; return; }
+        if (isSignUp && pass.length < 6) { errDiv.innerHTML = '<p class="auth-err">Password must be at least 6 characters.</p>'; return; }
+        submitBtn.textContent = "…";
+        submitBtn.disabled = true;
+        try {
+          if (isSignUp) { await signUp(email, pass, name || email.split("@")[0]); }
+          else { await signIn(email, pass); }
+          addLog("Signed in as " + viewer + ".");
+          close(); render();
+        } catch(e) {
+          errDiv.innerHTML = '<p class="auth-err">' + escapeHtml(e.message) + '</p>';
+          submitBtn.textContent = isSignUp ? "Create account" : "Sign in";
+          submitBtn.disabled = false;
+        }
+      };
+      submitBtn.addEventListener("click", submit);
+      passInp.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+      emailInp.addEventListener("keydown", e => { if (e.key === "Enter") passInp.focus(); });
+
+      modal.querySelector("#auth-switch").addEventListener("click", () => {
+        isSignUp = !isSignUp;
+        mount();
+      });
+    }
+
+    if (isLoggedIn) backdrop.addEventListener("click", e => { if (e.target === backdrop) close(); });
+  }
 
   const close = () => { backdrop.remove(); signingIn = false; };
-  // Only allow click-outside if they've already signed in once.
-  if (!isFirst) backdrop.addEventListener("click", e => { if (e.target === backdrop) close(); });
-
-  const cancelBtn = modal.querySelector("#vcancel");
-  if (cancelBtn) cancelBtn.addEventListener("click", close);
-
-  const clearBtn = modal.querySelector("#vclear");
-  if (clearBtn) clearBtn.addEventListener("click", () => {
-    const prev = viewer;
-    viewer = null; saveViewer(null);
-    if (prev) addLog("Signed out (was " + prev + ").");
-    close(); render();
-  });
-
-  const commit = () => {
-    const name = inp.value.trim().slice(0, 40);
-    if (!name) { inp.focus(); return; }
-    const prev = viewer;
-    viewer = name; saveViewer(name);
-    if (prev !== name) addLog(prev ? ("Switched viewer: " + prev + " → " + name + ".") : ("Signed in as " + name + "."));
-    close(); render();
-  };
-  modal.querySelector("#vsave").addEventListener("click", commit);
-  inp.addEventListener("keydown", e => { if (e.key === "Enter") commit(); });
+  document.body.appendChild(backdrop);
+  mount();
 }
 
 function renderEditor(k){
@@ -963,9 +1093,15 @@ function renderEditor(k){
   if (del) del.addEventListener("click", ()=>{ backdrop.remove(); deleteEntry(k); });
 }
 
-if (!viewer) signingIn = true;
-render();
-loadFromRemote().then(() => startRealtime());
+async function boot() {
+  // Try to restore session from stored token
+  await refreshToken();
+  if (!authUser) signingIn = true;
+  render();
+  await loadFromRemote();
+  startRealtime();
+}
+boot();
 </script>
 </body>
 </html>

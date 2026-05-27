@@ -491,7 +491,7 @@ function computeTransitions(){
     const e = data[k];
     const cur = (e && e.parent) || null;
     if (cur) {
-      if (prev && prev !== cur && !(e && e.unresolved)) map[k] = { from: prev, to: cur };
+      if (prev && prev !== cur && !(e && e.unresolved) && cur !== "BA" && cur !== "TBD") map[k] = { from: prev, to: cur };
       prev = cur;
     }
     w.setDate(w.getDate()+1);

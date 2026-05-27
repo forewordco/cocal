@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Summer Co-Parenting Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz@0,6..72;1,6..72&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --b: #1f6fb2;        /* Bobby — cerulean */
+    --b-soft: #cfe4f4;
+    --b-tint: #d4e6f5;
+    --b-line: #9cc6e8;
+    --a: #11a89b;        /* Allie — turquoise */
+    --a-soft: #c4e8e1;
+    --a-tint: #cfece5;
+    --a-line: #8bd3c8;
+    --ba: #5b7a86;       /* both — slate teal */
+    --ba-soft: #e2eaed;
+    --ink: #1d2a2f;
+    --purple: #6d3bd1;
+    --purple-soft: #efe7fb;
+    --muted: #6f8088;
+    --paper: #f3f6f5;
+    --card: #ffffff;
+    --line: #dce6e5;
+    --shadow: rgba(20,50,60,.14);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Newsreader', Georgia, serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 520px at 85% -8%, #ffffff 0%, transparent 60%),
+      radial-gradient(900px 500px at 5% 110%, #e4f0ee 0%, transparent 55%),
+      var(--paper);
+    background-attachment: fixed;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    width: min(94vw, 1400px);
+    margin: 0 auto;
+    padding: 30px clamp(14px, 3vw, 40px) 80px;
+  }
+
+  /* ---------- Header ---------- */
+  header.top {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 18px;
+    margin-bottom: 22px;
+  }
+  .title {
+    font-family: 'Fraunces', serif; font-weight: 600;
+    font-size: clamp(28px, 6vw, 46px); line-height: 1; margin: 0;
+    letter-spacing: -0.02em;
+  }
+  .subtitle { margin: 7px 0 0; color: var(--muted); font-style: italic; font-size: 15px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; align-items: center; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: 'Fraunces', serif; font-weight: 500; font-size: 13px;
+    padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--card); white-space: nowrap;
+  }
+  .chip i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+  .sw-b { background: var(--b); }
+  .sw-a { background: var(--a); }
+  .sw-t { background: linear-gradient(135deg, var(--b) 0%, var(--b) 40%, var(--purple) 47%, var(--purple) 53%, var(--a) 60%, var(--a) 100%); }
+  .sw-q { background: repeating-linear-gradient(45deg, #aeb8b8, #aeb8b8 2px, #d2dada 2px, #d2dada 4px); }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin: 18px 0 26px;
+  }
+  .btn {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 13.5px;
+    padding: 8px 15px; border-radius: 9px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    transition: .15s; display: inline-flex; align-items: center; gap: 7px;
+  }
+  .btn:hover { border-color: var(--ink); transform: translateY(-1px); }
+  .btn-primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn-primary:hover { background: #2c3f46; }
+  .btn-ghost { background: transparent; color: var(--muted); }
+  .btn-ghost:hover { color: var(--ink); }
+  .spacer { flex: 1; }
+
+  /* ---------- Month ---------- */
+  .month { margin-bottom: 34px; }
+  .month-name {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 21px;
+    margin: 0 0 10px; letter-spacing: -0.01em;
+  }
+  .month-name span { color: var(--muted); font-weight: 500; }
+  .dow {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    font-family: 'Fraunces', serif; font-size: 10.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+  }
+  .dow span { text-align: center; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; }
+
+  .cell {
+    position: relative; min-height: 110px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--card);
+    padding: 7px 8px; font-size: 11.5px; line-height: 1.28;
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .cell.empty { border: none; background: transparent; min-height: 0; }
+  .cell.out { opacity: .3; background: transparent; }
+  .cell.active { cursor: pointer; }
+  .cell.active:hover { transform: translateY(-2px); box-shadow: 0 6px 16px var(--shadow); z-index: 2; }
+
+  .cell-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; position: relative; z-index: 2; }
+  .daynum { font-family: 'Fraunces', serif; font-weight: 600; font-size: 14px; }
+  .tag {
+    font-family: 'Fraunces', serif; font-weight: 700; font-size: 9.5px;
+    padding: 1px 6px; border-radius: 999px; letter-spacing: .03em;
+  }
+  .time { font-family: 'Fraunces', serif; font-weight: 600; font-size: 11.5px; margin-bottom: 2px; }
+  .note-dot {
+    position: absolute; right: 6px; bottom: 6px;
+    width: 18px; height: 18px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(29,42,47,.07); color: var(--muted);
+    pointer-events: none;
+  }
+  .note-dot svg { width: 11px; height: 11px; display: block; }
+  .note-text {
+    position: relative; z-index: 2; margin-top: auto;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 9.8px; line-height: 1.32; color: var(--ink); opacity: .72;
+    padding-right: 20px;   /* clear the corner icon */
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .c-b .note-dot { background: rgba(31,111,178,.14); color: var(--b); }
+  .c-a .note-dot { background: rgba(17,168,155,.16); color: var(--a); }
+  .c-ba .note-dot { background: rgba(91,122,134,.16); color: var(--ba); }
+  .c-trans .note-dot { background: rgba(109,59,209,.14); color: var(--purple); }
+
+  .c-b { background: var(--b-tint); border-color: var(--b-line); }
+  .c-b .tag { background: var(--b); color: #fff; } .c-b .time { color: var(--b); }
+  .c-a { background: var(--a-tint); border-color: var(--a-line); }
+  .c-a .tag { background: var(--a); color: #fff; } .c-a .time { color: var(--a); }
+  .c-ba { background: var(--ba-soft); border-color: #c4d2d6; }
+  .c-ba .tag { background: var(--ba); color: #fff; } .c-ba .time { color: var(--ba); }
+  .c-none { background: var(--card); }
+
+  /* Real gradient transition day */
+  .c-trans { border-color: #c3b0e8; }
+  .c-trans .time { color: var(--ink); }
+  .c-trans::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    background: linear-gradient(135deg, transparent calc(50% - 0.5px), var(--line) calc(50% - 0.5px), var(--line) calc(50% + 0.5px), transparent calc(50% + 0.5px));
+  }
+  .tag-trans {
+    background: var(--purple) !important; color: #fff;
+    border: 1px solid var(--purple); padding: 1px 6px;
+    position: relative; z-index: 3;
+  }
+
+  /* Unresolved */
+  .c-unres {
+    filter: grayscale(.85) opacity(.72);
+    background: #eef1f0 !important; border-color: #d3dcdb !important; border-style: dashed;
+  }
+  .c-unres .tag { background: #8f9a9a !important; color: #fff; }
+  .c-unres .time { color: #5f6a6a !important; }
+  .resolve {
+    margin-top: 5px; align-self: flex-start;
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 10px;
+    letter-spacing: .03em; padding: 3px 9px; border-radius: 999px;
+    border: 1px solid #a7b2b2; background: #fff; color: #54605f; cursor: pointer; transition: .15s;
+  }
+  .resolve:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* ---------- Changelog ---------- */
+  .panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px 22px; margin-top: 30px;
+  }
+  .panel h2 {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; margin: 0 0 4px;
+  }
+  .panel .panel-sub { color: var(--muted); font-style: italic; font-size: 13.5px; margin: 0 0 14px; }
+  .log-item {
+    display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+  .log-item:first-of-type { border-top: none; }
+  .log-when {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 12px; color: var(--muted);
+    white-space: nowrap; min-width: 92px;
+  }
+  .log-who {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 12.5px; color: var(--ink);
+    white-space: nowrap; min-width: 70px;
+  }
+  .log-anon { color: var(--muted); font-style: italic; font-weight: 500; }
+  .log-what { flex: 1; }
+  .log-what b { font-weight: 600; }
+  .log-empty { color: var(--muted); font-style: italic; font-size: 13.5px; }
+  .signin-sub { margin: 4px 0 6px; color: var(--muted); font-style: italic; font-size: 13.5px; }
+  .clearlog {
+    margin-top: 12px; font-family: 'Fraunces', serif; font-size: 12px; color: var(--muted);
+    background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0;
+  }
+  .clearlog:hover { color: var(--ink); }
+
+  .foot { margin: 28px auto 0; max-width: 600px; text-align: center; color: var(--muted); font-style: italic; font-size: 13.5px; line-height: 1.55; }
+
+  /* ---------- Modal ---------- */
+  .backdrop {
+    position: fixed; inset: 0; background: rgba(20,35,40,.45); backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+    animation: fade .15s ease;
+  }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--card); border-radius: 16px; width: min(460px, 100%);
+    padding: 26px 26px 22px; box-shadow: 0 24px 60px rgba(15,40,45,.32); border: 1px solid var(--line);
+    animation: pop .18s ease;
+  }
+  @keyframes pop { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal h3 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 23px; margin: 0 0 16px; }
+  .flabel {
+    display: block; font-family: 'Fraunces', serif; font-size: 11.5px; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--muted); margin: 14px 0 7px;
+  }
+  .pick { display: flex; gap: 7px; flex-wrap: wrap; }
+  .pp {
+    font-family: 'Fraunces', serif; font-size: 14px; padding: 8px 15px; border-radius: 9px;
+    border: 1px solid var(--line); background: #fff; cursor: pointer; transition: .14s; color: var(--ink);
+  }
+  .pp:hover { border-color: var(--ink); }
+  .pp.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .pp.on.pb { background: var(--b); border-color: var(--b); }
+  .pp.on.pa { background: var(--a); border-color: var(--a); }
+  .pp.on.pba { background: var(--ba); border-color: var(--ba); }
+  .inp, .ta {
+    width: 100%; font-family: 'Newsreader', serif; font-size: 15px; padding: 10px 12px;
+    border-radius: 9px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); resize: vertical;
+  }
+  .inp:focus, .ta:focus { outline: 2px solid var(--b); border-color: var(--b); }
+  .checkrow { display: flex; align-items: center; gap: 9px; margin-top: 16px; font-size: 14px; cursor: pointer; }
+  .checkrow input { width: 16px; height: 16px; accent-color: var(--b); }
+  .modal-actions { display: flex; align-items: center; margin-top: 24px; gap: 10px; }
+  .modal-actions .right { display: flex; gap: 10px; margin-left: auto; }
+  .btn-del { background: transparent; color: var(--a); border-color: var(--a-line); }
+  .btn-del:hover { background: var(--a); color: #fff; }
+
+  @media (max-width: 460px) {
+    .cell { min-height: 78px; font-size: 10.8px; }
+    .note-text { -webkit-line-clamp: 2; font-size: 9.2px; }
+    .log-when { min-width: 74px; font-size: 11px; }
+    .log-who { min-width: 56px; font-size: 11.5px; }
+  }
+</style>
+</head>
+<body>
+<div id="root" class="wrap"></div>
+
+<script>
+// ============================================================
+//  Summer Co-Parenting Calendar  —  self-contained, no build
+//  B = Bobby (cerulean), A = Allie (turquoise)
+//  Auto-saves to localStorage. Logs every change. Exports .ics.
+// ============================================================
+
+const STORE_DATA = "coparent.schedule.v2";
+const STORE_LOG  = "coparent.changelog.v2";
+const STORE_VIEWER = "coparent.viewer.v1";
+
+const RANGE_START = "2026-05-25";   // Memorial Day 2026
+const RANGE_END   = "2026-09-07";   // Labor Day 2026
+
+const MONTHS = [
+  {y:2026,m:4},{y:2026,m:5},{y:2026,m:6},{y:2026,m:7},{y:2026,m:8}
+];
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const PMETA = { B:{label:"Bobby",short:"B"}, A:{label:"Allie",short:"A"}, BA:{label:"Both / TBD",short:"B+A"} };
+
+const SEED = {
+  "2026-05-27":{parent:"B",notes:"Desi all-day school (camping theme day). B picks up 3:15.",time:"3:15 PM"},
+  "2026-05-28":{parent:"B",notes:"Desi all-day school. Charlie field trip. Walt school picnic. Desi school picnic — B brings potluck dish. Walt soccer game (skip)."},
+  "2026-05-29":{parent:"B",notes:"Allie at SPSNL."},
+  "2026-05-30":{parent:"B",notes:"B drops at 1pm.",time:"1:00 PM"},
+  "2026-05-31":{parent:"A",notes:""},
+  "2026-06-01":{parent:"A",notes:""},
+  "2026-06-02":{parent:"A",notes:""},
+  "2026-06-03":{parent:"A",notes:"Charlie last day of 4th grade — mid-day picnic 12–2. Walter all-lower-elementary carnival 10:30–12:30."},
+  "2026-06-04":{parent:"B",notes:"B brings Desi for ECFE. Walt to school. Charles with B. Soccer."},
+  "2026-06-05":{parent:"A",notes:"Allie's exam."},
+  "2026-06-06":{parent:"B",notes:"Extra day with B before camp."},
+  "2026-06-07":{parent:"B",notes:"Birthday. B drops for Du Nord around 10.",time:"10:00 AM"},
+  "2026-06-08":{parent:"A",notes:"Du Nord."},
+  "2026-06-09":{parent:"A",notes:"Du Nord."},
+  "2026-06-10":{parent:"A",notes:"Du Nord."},
+  "2026-06-11":{parent:"A",notes:"Du Nord."},
+  "2026-06-12":{parent:"A",notes:"Du Nord."},
+  "2026-06-13":{parent:"B",notes:"Du Nord. Night with B? Or Ireland?",unresolved:true},
+  "2026-06-14":{parent:"B",notes:"B (different days because of camp)."},
+  "2026-06-15":{parent:"A",notes:"B drops kids with Allie before work. Swimming lessons start."},
+  "2026-06-16":{parent:"A",notes:""},
+  "2026-06-17":{parent:"A",notes:"New trial summer schedule begins."},
+  "2026-06-18":{parent:"B",notes:"B picks up at 9am.",time:"9:00 AM"},
+  "2026-06-19":{parent:"B",notes:""},
+  "2026-06-20":{parent:"B",notes:""},
+  "2026-06-21":{parent:"B",notes:"Father's Day (B decides when to drop)."},
+  "2026-06-22":{parent:"A",notes:""},
+  "2026-06-23":{parent:"A",notes:""},
+  "2026-06-24":{parent:"A",notes:"B picks up after work, before dinner. Allie would theoretically leave for work by 5, but this remains unclear.",unresolved:true},
+  "2026-06-25":{parent:"B",notes:""},
+  "2026-06-26":{parent:"B",notes:""},
+  "2026-06-27":{parent:"B",notes:"B drops at 6pm.",time:"6:00 PM"},
+  "2026-06-28":{parent:"A",notes:""},
+  "2026-06-29":{parent:"A",notes:""},
+  "2026-06-30":{parent:"BA",notes:"Brother's Day? Leave with Bobby?",unresolved:true},
+  "2026-07-01":{parent:"B",notes:"Extra time with Bobby before camp."},
+  "2026-07-02":{parent:"B",notes:"Extra time with Bobby before camp."},
+  "2026-07-03":{parent:"B",notes:"Extra time with Bobby before camp."},
+  "2026-07-04":{parent:"B",notes:"Extra time with Bobby before camp."},
+  "2026-07-05":{parent:"B",notes:"B drops morning, start drive to CO.",time:"Morning"},
+  "2026-07-06":{parent:"A",notes:"CO."},
+  "2026-07-07":{parent:"A",notes:"CO."},
+  "2026-07-08":{parent:"A",notes:"CO."},
+  "2026-07-09":{parent:"A",notes:"CO."},
+  "2026-07-10":{parent:"A",notes:"CO."},
+  "2026-07-11":{parent:"A",notes:"CO."},
+  "2026-07-12":{parent:"A",notes:"CO."},
+  "2026-07-13":{parent:"B",notes:"Drive home from Lincoln. Night with B."},
+  "2026-07-14":{parent:"B",notes:"Extra time with B after CO."},
+  "2026-07-15":{parent:"B",notes:"Extra time with B after CO."},
+  "2026-07-16":{parent:"B",notes:"Extra time with B after CO."},
+  "2026-07-17":{parent:"B",notes:"Extra time with B after CO."},
+  "2026-07-18":{parent:"A",notes:"B drops at normal time."},
+  "2026-07-19":{parent:"A",notes:""},
+  "2026-07-20":{parent:"A",notes:""},
+  "2026-07-21":{parent:"A",notes:""},
+  "2026-07-29":{parent:null,notes:"Des's birthday."}
+};
+
+// ---------- State ----------
+let data = loadData();
+let log  = loadLog();
+let viewer = loadViewer();   // string | null — set by sign-in modal
+let editingKey = null;
+let signingIn = false;       // shows the sign-in modal when true
+
+function loadData() {
+  try { const r = localStorage.getItem(STORE_DATA); if (r) return JSON.parse(r); } catch(e){}
+  return structuredClone(SEED);
+}
+function loadLog() {
+  try { const r = localStorage.getItem(STORE_LOG); if (r) return JSON.parse(r); } catch(e){}
+  return [{ ts: Date.now(), text: "Initial summer schedule created." }];
+}
+function loadViewer() {
+  try { const r = localStorage.getItem(STORE_VIEWER); if (r) return r; } catch(e){}
+  return null;
+}
+function saveViewer(name) {
+  try { if (name) localStorage.setItem(STORE_VIEWER, name); else localStorage.removeItem(STORE_VIEWER); } catch(e){}
+}
+function saveData(){ try { localStorage.setItem(STORE_DATA, JSON.stringify(data)); } catch(e){} }
+function saveLog(){ try { localStorage.setItem(STORE_LOG, JSON.stringify(log)); } catch(e){} }
+function addLog(text){ log.unshift({ ts: Date.now(), text, who: viewer || null }); if (log.length > 200) log.pop(); saveLog(); }
+
+// ---------- Date helpers ----------
+function ymd(y,m,d){ return y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0"); }
+function inRange(k){ return k >= RANGE_START && k <= RANGE_END; }
+function prettyDate(k){
+  const d = new Date(k+"T00:00:00");
+  return d.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+}
+function shortDate(k){
+  const d = new Date(k+"T00:00:00");
+  return d.toLocaleDateString("en-US",{month:"short",day:"numeric"});
+}
+function prettyTs(ts){
+  return new Date(ts).toLocaleDateString("en-US",{month:"short",day:"numeric"}) + ", " +
+         new Date(ts).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+}
+
+// ---------- Transition detection ----------
+function computeTransitions(){
+  const map = {};
+  let prev = null;
+  let w = new Date(RANGE_START+"T00:00:00");
+  const end = new Date(RANGE_END+"T00:00:00");
+  while (w <= end) {
+    const k = ymd(w.getFullYear(), w.getMonth(), w.getDate());
+    const e = data[k];
+    const cur = (e && e.parent) || null;
+    if (cur) {
+      if (prev && prev !== cur && !(e && e.unresolved)) map[k] = { from: prev, to: cur };
+      prev = cur;
+    }
+    w.setDate(w.getDate()+1);
+  }
+  return map;
+}
+
+// ---------- ICS export ----------
+function pad(n){ return String(n).padStart(2,"0"); }
+function icsDate(k){ return k.replace(/-/g,""); }          // all-day: YYYYMMDD
+function nextDay(k){
+  const d = new Date(k+"T00:00:00"); d.setDate(d.getDate()+1);
+  return ymd(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function icsEscape(s){ return (s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
+
+function buildICS(){
+  const now = new Date();
+  const stamp = now.getUTCFullYear()+pad(now.getUTCMonth()+1)+pad(now.getUTCDate())+"T"+
+                pad(now.getUTCHours())+pad(now.getUTCMinutes())+pad(now.getUTCSeconds())+"Z";
+  const lines = [
+    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Coparenting//Summer 2026//EN",
+    "CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:Summer Co-Parenting 2026"
+  ];
+  Object.keys(data).sort().forEach(k => {
+    if (!inRange(k)) return;
+    const e = data[k];
+    if (!e || (!e.parent && !e.notes && !e.time)) return;
+    const who = e.parent ? (PMETA[e.parent]?.label || e.parent) : "Unassigned";
+    let title = who;
+    if (e.time) title += " · " + e.time;
+    if (e.unresolved) title = "(?) " + title;
+    const descParts = [];
+    if (e.time) descParts.push("Pickup/dropoff: " + e.time);
+    if (e.notes) descParts.push(e.notes);
+    if (e.unresolved) descParts.push("[Unresolved — plan not yet set]");
+    lines.push(
+      "BEGIN:VEVENT",
+      "UID:" + k + "-coparent@summer2026",
+      "DTSTAMP:" + stamp,
+      "DTSTART;VALUE=DATE:" + icsDate(k),
+      "DTEND;VALUE=DATE:" + icsDate(nextDay(k)),
+      "SUMMARY:" + icsEscape(title),
+      "DESCRIPTION:" + icsEscape(descParts.join("\n")),
+      "TRANSP:TRANSPARENT",
+      "END:VEVENT"
+    );
+  });
+  lines.push("END:VCALENDAR");
+  // ICS spec wants CRLF line endings
+  return lines.join("\r\n");
+}
+
+function downloadICS(){
+  const blob = new Blob([buildICS()], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "summer-coparenting-2026.ics";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  addLog("Exported calendar (.ics) file."); render();
+}
+
+// ---------- Mutations ----------
+function openEditor(k){ editingKey = k; render(); }
+function closeEditor(){ editingKey = null; render(); }
+
+function describeEntry(e){
+  if (!e || (!e.parent && !e.notes && !e.time)) return "empty";
+  const who = e.parent ? (PMETA[e.parent]?.label || e.parent) : "unassigned";
+  return who + (e.time ? " ("+e.time+")" : "") + (e.unresolved ? " [unresolved]" : "");
+}
+
+function saveEntry(k, draft){
+  const before = data[k];
+  const cleaned = { parent: draft.parent || null, notes: (draft.notes||"").trim(), time: (draft.time||"").trim() };
+  if (draft.unresolved) cleaned.unresolved = true;
+  let changed = false, summary = "";
+  if (!cleaned.parent && !cleaned.notes && !cleaned.time) {
+    if (before) { delete data[k]; changed = true; summary = "Cleared " + shortDate(k) + " (was " + describeEntry(before) + ")."; }
+  } else {
+    const beforeDesc = describeEntry(before);
+    const afterDesc  = describeEntry(cleaned);
+    if (JSON.stringify(before||{}) !== JSON.stringify(cleaned)) {
+      data[k] = cleaned; changed = true;
+      summary = (before ? "Updated " : "Added ") + shortDate(k) + ": " + beforeDesc + (before ? " → " : "") + (before ? afterDesc : afterDesc) + ".";
+      if (!before) summary = "Added " + shortDate(k) + ": " + afterDesc + ".";
+    }
+  }
+  if (changed) { saveData(); addLog(summary); }
+  editingKey = null; render();
+}
+
+function deleteEntry(k){
+  const before = data[k];
+  if (before) { delete data[k]; saveData(); addLog("Removed entry for " + shortDate(k) + " (was " + describeEntry(before) + ")."); }
+  editingKey = null; render();
+}
+
+function resolveEntry(k){
+  const e = data[k];
+  if (e && e.unresolved) { delete e.unresolved; saveData(); addLog("Resolved " + shortDate(k) + " — set as " + describeEntry(e) + "."); render(); }
+}
+
+function resetAll(){
+  if (!confirm("Reset the whole calendar back to the original schedule? Your edits and changelog will be lost.")) return;
+  data = structuredClone(SEED);
+  log = [{ ts: Date.now(), text: "Calendar reset to the original summer schedule." }];
+  saveData(); saveLog(); render();
+}
+
+function clearLog(){
+  if (!confirm("Clear the changelog? (Your schedule stays untouched.)")) return;
+  log = [{ ts: Date.now(), text: "Changelog cleared." }];
+  saveLog(); render();
+}
+
+// ---------- Render ----------
+function el(html){ const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
+
+function render(){
+  const root = document.getElementById("root");
+  const trans = computeTransitions();
+
+  let b=0,a=0,q=0;
+  Object.entries(data).forEach(([k,v])=>{ if(!inRange(k))return; if(v.unresolved)q++; if(v.parent==="B")b++; else if(v.parent==="A")a++; });
+  const tCount = Object.keys(trans).length;
+
+  root.innerHTML = `
+    <header class="top">
+      <h1 class="title">Summer Co-Parenting</h1>
+      <p class="subtitle">Memorial Day → Labor Day 2026 · pickups, dropoffs &amp; handoffs</p>
+      <div class="legend">
+        <span class="chip"><i class="sw-b"></i> Bobby · ${b}</span>
+        <span class="chip"><i class="sw-a"></i> Allie · ${a}</span>
+        ${tCount?`<span class="chip"><i class="sw-t"></i> Transition · ${tCount}</span>`:""}
+        ${q?`<span class="chip"><i class="sw-q"></i> Unresolved · ${q}</span>`:""}
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <button class="btn btn-primary" id="ics">⤓ Add to calendar (.ics)</button>
+      <button class="btn" id="viewer">${viewer ? `Viewing as <b style="margin-left:4px">${escapeHtml(viewer)}</b>` : "Sign in"}</button>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" id="reset" title="Reset to original schedule">Reset</button>
+    </div>
+
+    <div id="months"></div>
+
+    <p class="foot">
+      Tap any day to edit, add a pickup/dropoff time, or remove it. Gradient days are transitions — the kids change
+      houses, blending from one parent's color into the other. The corner icon and preview text show a day's note — tap to read the full thing.
+      Faded days are unresolved; hit Resolve once a plan is set. Everything saves automatically in this browser, and
+      each change is logged below.
+    </p>
+
+    <section class="panel">
+      <h2>Changelog</h2>
+      <p class="panel-sub">A running record of schedule changes, newest first.</p>
+      <div id="log"></div>
+      <button class="clearlog" id="clearlog">Clear changelog</button>
+    </section>
+  `;
+
+  // Months
+  const monthsWrap = root.querySelector("#months");
+  MONTHS.forEach(({y,m}) => {
+    const firstDow = new Date(y,m,1).getDay();
+    const dim = new Date(y,m+1,0).getDate();
+    const anyIn = Array.from({length:dim},(_,i)=>ymd(y,m,i+1)).some(inRange);
+    if (!anyIn) return;
+
+    const sec = el(`<section class="month"></section>`);
+    sec.appendChild(el(`<h2 class="month-name">${MONTH_NAMES[m]} <span>${y}</span></h2>`));
+    sec.appendChild(el(`<div class="dow">${DOW.map(d=>`<span>${d}</span>`).join("")}</div>`));
+    const grid = el(`<div class="grid"></div>`);
+
+    const cells = [];
+    for (let i=0;i<firstDow;i++) cells.push(null);
+    for (let d=1; d<=dim; d++) cells.push(d);
+    while (cells.length % 7 !== 0) cells.push(null);
+
+    cells.forEach(d => {
+      if (d === null){ grid.appendChild(el(`<div class="cell empty"></div>`)); return; }
+      const k = ymd(y,m,d);
+      const active = inRange(k);
+      const e = data[k];
+      const t = trans[k];
+      const unres = e && e.unresolved;
+      const isTrans = !!t && !unres;
+
+      const pcls = e&&e.parent==="B"?"c-b":e&&e.parent==="A"?"c-a":e&&e.parent==="BA"?"c-ba":"c-none";
+      const cls = ["cell", active?"active":"out", pcls, unres?"c-unres":"", isTrans?"c-trans":""].join(" ");
+
+      const cell = el(`<div class="${cls}" tabindex="${active?0:-1}"></div>`);
+
+      if (isTrans) {
+        const soft = p => p==="B"?"var(--b-soft)":p==="A"?"var(--a-soft)":"var(--ba-soft)";
+        // a real, smooth diagonal gradient between the two parents' tints
+        cell.style.backgroundImage =
+          `linear-gradient(135deg, ${soft(t.from)} 0%, ${soft(t.from)} 30%, ${soft(t.to)} 70%, ${soft(t.to)} 100%)`;
+      }
+
+      const tagHtml = isTrans
+        ? `<span class="tag tag-trans">${PMETA[t.from]?.short}→${PMETA[t.to]?.short}</span>`
+        : (e&&e.parent ? `<span class="tag">${PMETA[e.parent]?.short}</span>` : "");
+
+      cell.appendChild(el(`<div class="cell-top"><span class="daynum">${d}</span>${tagHtml}</div>`));
+      if (e&&e.time) cell.appendChild(el(`<div class="time">${escapeHtml(e.time)}</div>`));
+      if (e&&e.notes && e.notes.trim()) {
+        const full = e.notes.trim();
+        const nd = el(`<span class="note-dot"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 3.5h16a.5.5 0 0 1 .5.5v10.6a.5.5 0 0 1-.146.353l-5.4 5.4a.5.5 0 0 1-.354.147H4a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5Z" fill="currentColor" fill-opacity="0.9"/><path d="M14 20.5V15a.5.5 0 0 1 .5-.5h5.5" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`);
+        nd.setAttribute("title", full);
+        if (!unres) {
+          const nt = el(`<div class="note-text">${escapeHtml(full)}</div>`);
+          nt.setAttribute("title", full);
+          cell.appendChild(nt);
+        }
+        cell.appendChild(nd);
+      }
+      if (unres) {
+        const rb = el(`<button class="resolve">Resolve</button>`);
+        rb.addEventListener("click", ev => { ev.stopPropagation(); resolveEntry(k); });
+        cell.appendChild(rb);
+      }
+      if (active) cell.addEventListener("click", ()=>openEditor(k));
+      grid.appendChild(cell);
+    });
+
+    sec.appendChild(grid);
+    monthsWrap.appendChild(sec);
+  });
+
+  // Changelog
+  const logWrap = root.querySelector("#log");
+  if (!log.length) {
+    logWrap.appendChild(el(`<p class="log-empty">No changes yet.</p>`));
+  } else {
+    log.forEach(item => {
+      const whoLabel = item.who ? escapeHtml(item.who) : "<span class='log-anon'>(before sign-in)</span>";
+      logWrap.appendChild(el(
+        `<div class="log-item"><span class="log-when">${prettyTs(item.ts)}</span><span class="log-who">${whoLabel}</span><span class="log-what">${escapeHtml(item.text)}</span></div>`
+      ));
+    });
+  }
+
+  // Wire toolbar
+  root.querySelector("#ics").addEventListener("click", downloadICS);
+  root.querySelector("#reset").addEventListener("click", resetAll);
+  root.querySelector("#viewer").addEventListener("click", () => { signingIn = true; render(); });
+  root.querySelector("#clearlog").addEventListener("click", clearLog);
+
+  if (signingIn) renderSignIn();
+  if (editingKey) renderEditor(editingKey);
+}
+
+function escapeHtml(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function renderSignIn(){
+  const isFirst = !viewer;
+  const backdrop = el(`<div class="backdrop"></div>`);
+  const modal = el(`
+    <div class="modal">
+      <h3>${isFirst ? "Who's viewing?" : "Switch viewer"}</h3>
+      <p class="signin-sub">Your name appears on every change you make in the changelog. Saved on this device only.</p>
+      <label class="flabel">Quick pick</label>
+      <div class="pick">
+        <button class="pp pickname" data-name="Bobby">Bobby</button>
+        <button class="pp pickname" data-name="Allie">Allie</button>
+      </div>
+      <label class="flabel">Or type a name</label>
+      <input class="inp" id="vname" placeholder="e.g. Charlie, Grandma, guest" value="${escapeHtml(viewer || "")}" />
+      <div class="modal-actions">
+        ${viewer ? `<button class="btn btn-del" id="vclear">Sign out</button>` : ""}
+        <div class="right">
+          ${isFirst ? "" : `<button class="btn btn-ghost" id="vcancel">Cancel</button>`}
+          <button class="btn btn-primary" id="vsave">Continue</button>
+        </div>
+      </div>
+    </div>
+  `);
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+
+  const inp = modal.querySelector("#vname");
+  setTimeout(()=>inp.focus(), 30);
+
+  modal.querySelectorAll(".pickname").forEach(b=>{
+    b.addEventListener("click", () => { inp.value = b.getAttribute("data-name"); });
+  });
+
+  const close = () => { backdrop.remove(); signingIn = false; };
+  // Only allow click-outside if they've already signed in once.
+  if (!isFirst) backdrop.addEventListener("click", e => { if (e.target === backdrop) close(); });
+
+  const cancelBtn = modal.querySelector("#vcancel");
+  if (cancelBtn) cancelBtn.addEventListener("click", close);
+
+  const clearBtn = modal.querySelector("#vclear");
+  if (clearBtn) clearBtn.addEventListener("click", () => {
+    const prev = viewer;
+    viewer = null; saveViewer(null);
+    if (prev) addLog("Signed out (was " + prev + ").");
+    close(); render();
+  });
+
+  const commit = () => {
+    const name = inp.value.trim().slice(0, 40);
+    if (!name) { inp.focus(); return; }
+    const prev = viewer;
+    viewer = name; saveViewer(name);
+    if (prev !== name) addLog(prev ? ("Switched viewer: " + prev + " → " + name + ".") : ("Signed in as " + name + "."));
+    close(); render();
+  };
+  modal.querySelector("#vsave").addEventListener("click", commit);
+  inp.addEventListener("keydown", e => { if (e.key === "Enter") commit(); });
+}
+
+function renderEditor(k){
+  const e = data[k] || { parent:null, notes:"", time:"" };
+  const draft = { parent: e.parent||"", time: e.time||"", notes: e.notes||"", unresolved: !!e.unresolved };
+  const hasEntry = !!data[k];
+
+  const backdrop = el(`<div class="backdrop"></div>`);
+  const modal = el(`
+    <div class="modal">
+      <h3>${prettyDate(k)}</h3>
+      <label class="flabel">Who has the kids?</label>
+      <div class="pick">
+        ${[["","—"],["B","Bobby"],["A","Allie"],["BA","Both / TBD"]].map(([v,l])=>
+          `<button class="pp ${draft.parent===v?"on":""} ${v?("p"+v.toLowerCase()):""}" data-v="${v}">${l}</button>`).join("")}
+      </div>
+      <label class="flabel">Pickup / dropoff time</label>
+      <input class="inp" id="f-time" value="${escapeHtml(draft.time)}" placeholder="e.g. 3:15 PM, Morning, before dinner" />
+      <label class="flabel">Notes</label>
+      <textarea class="ta" id="f-notes" rows="3" placeholder="Anything worth remembering for this day…">${escapeHtml(draft.notes)}</textarea>
+      <label class="checkrow"><input type="checkbox" id="f-unres" ${draft.unresolved?"checked":""}/> Mark as unresolved (faded until a plan is set)</label>
+      <div class="modal-actions">
+        ${hasEntry?`<button class="btn btn-del" id="f-del">Delete</button>`:""}
+        <div class="right">
+          <button class="btn btn-ghost" id="f-cancel">Cancel</button>
+          <button class="btn btn-primary" id="f-save">Save</button>
+        </div>
+      </div>
+    </div>
+  `);
+
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+
+  modal.querySelectorAll(".pp").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      draft.parent = btn.getAttribute("data-v");
+      modal.querySelectorAll(".pp").forEach(b=>{
+        const v=b.getAttribute("data-v");
+        b.classList.toggle("on", v===draft.parent);
+      });
+    });
+  });
+
+  const close = ()=>{ backdrop.remove(); editingKey=null; };
+  backdrop.addEventListener("click", e=>{ if(e.target===backdrop) close(); });
+  modal.querySelector("#f-cancel").addEventListener("click", close);
+  modal.querySelector("#f-save").addEventListener("click", ()=>{
+    draft.time = modal.querySelector("#f-time").value;
+    draft.notes = modal.querySelector("#f-notes").value;
+    draft.unresolved = modal.querySelector("#f-unres").checked;
+    backdrop.remove();
+    saveEntry(k, draft);
+  });
+  const del = modal.querySelector("#f-del");
+  if (del) del.addEventListener("click", ()=>{ backdrop.remove(); deleteEntry(k); });
+}
+
+if (!viewer) signingIn = true;
+render();
+</script>
+</body>
+</html>

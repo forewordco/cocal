@@ -499,6 +499,19 @@ function computeTransitions(){
   return map;
 }
 
+function findNextParent(k) {
+  const d = new Date(k + "T00:00:00");
+  const end = new Date(RANGE_END + "T00:00:00");
+  d.setDate(d.getDate() + 1);
+  while (d <= end) {
+    const key = ymd(d.getFullYear(), d.getMonth(), d.getDate());
+    const entry = data[key];
+    if (entry && entry.parent && entry.parent !== "BA" && entry.parent !== "TBD") return entry.parent;
+    d.setDate(d.getDate() + 1);
+  }
+  return null;
+}
+
 // ---------- ICS export ----------
 function pad(n){ return String(n).padStart(2,"0"); }
 function icsDate(k){ return k.replace(/-/g,""); }          // all-day: YYYYMMDD
@@ -698,9 +711,20 @@ function render(){
           `linear-gradient(135deg, ${soft(t.from)} 0%, ${soft(t.from)} 30%, ${soft(t.to)} 70%, ${soft(t.to)} 100%)`;
       }
 
-      const tagHtml = isTrans
-        ? `<span class="tag tag-trans">${PMETA[t.from]?.short}→${PMETA[t.to]?.short}</span>`
-        : (e&&e.parent ? `<span class="tag">${PMETA[e.parent]?.short}</span>` : "");
+      let tagHtml;
+      if (isTrans && (e.parent === "BA" || e.parent === "TBD")) {
+        // Both/TBD day: show full chain if parents differ on each side, otherwise just the label
+        const nextP = findNextParent(k);
+        if (nextP && nextP !== t.from) {
+          tagHtml = `<span class="tag tag-trans">${PMETA[t.from]?.short}→${PMETA[e.parent]?.short}→${PMETA[nextP]?.short}</span>`;
+        } else {
+          tagHtml = `<span class="tag">${PMETA[e.parent]?.short}</span>`;
+        }
+      } else if (isTrans) {
+        tagHtml = `<span class="tag tag-trans">${PMETA[t.from]?.short}→${PMETA[t.to]?.short}</span>`;
+      } else {
+        tagHtml = (e&&e.parent ? `<span class="tag">${PMETA[e.parent]?.short}</span>` : "");
+      }
 
       cell.appendChild(el(`<div class="cell-top"><span class="daynum">${d}</span>${tagHtml}</div>`));
       if (e&&e.time) cell.appendChild(el(`<div class="time">${escapeHtml(e.time)}</div>`));

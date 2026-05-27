@@ -696,9 +696,10 @@ function render(){
       const e = data[k];
       const t = trans[k];
       const unres = e && e.unresolved;
-      const isTrans = !!t && !unres;
-      // Gradient only for direct B↔A transitions; any transition involving BA/TBD is tag-only
-      const showGradient = isTrans && t.from !== "BA" && t.from !== "TBD" && t.to !== "BA" && t.to !== "TBD";
+      // If coming FROM a Both/TBD day, suppress transition — that day already shows the full chain
+      const isTrans = !!t && !unres && t.from !== "BA" && t.from !== "TBD";
+      // Gradient only for direct B↔A transitions
+      const showGradient = isTrans && t.to !== "BA" && t.to !== "TBD";
 
       const pcls = e&&e.parent==="B"?"c-b":e&&e.parent==="A"?"c-a":e&&e.parent==="BA"?"c-ba":e&&e.parent==="TBD"?"c-tbd":"c-none";
       const cls = ["cell", active?"active":"out", pcls, unres?"c-unres":"", showGradient?"c-trans":""].join(" ");

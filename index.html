@@ -491,7 +491,7 @@ function computeTransitions(){
     const e = data[k];
     const cur = (e && e.parent) || null;
     if (cur) {
-      if (prev && prev !== cur && !(e && e.unresolved) && cur !== "BA" && cur !== "TBD") map[k] = { from: prev, to: cur };
+      if (prev && prev !== cur && !(e && e.unresolved)) map[k] = { from: prev, to: cur };
       prev = cur;
     }
     w.setDate(w.getDate()+1);
@@ -684,15 +684,16 @@ function render(){
       const t = trans[k];
       const unres = e && e.unresolved;
       const isTrans = !!t && !unres;
+      // Gradient only for single-parent transitions (B or A); BA/TBD keep their solid color
+      const showGradient = isTrans && e && e.parent !== "BA" && e.parent !== "TBD";
 
       const pcls = e&&e.parent==="B"?"c-b":e&&e.parent==="A"?"c-a":e&&e.parent==="BA"?"c-ba":e&&e.parent==="TBD"?"c-tbd":"c-none";
-      const cls = ["cell", active?"active":"out", pcls, unres?"c-unres":"", isTrans?"c-trans":""].join(" ");
+      const cls = ["cell", active?"active":"out", pcls, unres?"c-unres":"", showGradient?"c-trans":""].join(" ");
 
       const cell = el(`<div class="${cls}" tabindex="${active?0:-1}"></div>`);
 
-      if (isTrans) {
+      if (showGradient) {
         const soft = p => p==="B"?"var(--b-soft)":p==="A"?"var(--a-soft)":p==="TBD"?"var(--tbd-soft)":"var(--ba-soft)";
-        // a real, smooth diagonal gradient between the two parents' tints
         cell.style.backgroundImage =
           `linear-gradient(135deg, ${soft(t.from)} 0%, ${soft(t.from)} 30%, ${soft(t.to)} 70%, ${soft(t.to)} 100%)`;
       }

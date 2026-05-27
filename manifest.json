@@ -1,0 +1,15 @@
+{
+  "name": "Summer Co-Parenting Calendar",
+  "short_name": "CoCal",
+  "description": "Summer co-parenting schedule — Memorial Day to Labor Day 2026",
+  "start_url": "/cocal/",
+  "scope": "/cocal/",
+  "display": "standalone",
+  "background_color": "#f3f6f5",
+  "theme_color": "#1d2a2f",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

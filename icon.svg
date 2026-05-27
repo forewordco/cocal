@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="108" fill="#1d2a2f"/>
+  <rect x="56" y="120" width="400" height="336" rx="40" fill="#f3f6f5"/>
+  <rect x="56" y="120" width="400" height="80" rx="40" fill="#1d2a2f"/>
+  <rect x="56" y="160" width="400" height="40" fill="#1d2a2f"/>
+  <circle cx="152" cy="96" r="24" fill="#f3f6f5"/>
+  <circle cx="360" cy="96" r="24" fill="#f3f6f5"/>
+  <rect x="132" y="56" width="40" height="80" rx="16" fill="#1d2a2f"/>
+  <rect x="340" y="56" width="40" height="80" rx="16" fill="#1d2a2f"/>
+  <!-- B and A color blocks -->
+  <rect x="96" y="240" width="130" height="80" rx="16" fill="#1f6fb2"/>
+  <rect x="246" y="240" width="80" height="80" rx="16" fill="#6d3bd1"/>
+  <rect x="346" y="240" width="70" height="80" rx="16" fill="#11a89b"/>
+  <rect x="96" y="340" width="70" height="80" rx="16" fill="#11a89b"/>
+  <rect x="186" y="340" width="140" height="80" rx="16" fill="#1f6fb2"/>
+  <rect x="346" y="340" width="70" height="80" rx="16" fill="#11a89b"/>
+</svg>

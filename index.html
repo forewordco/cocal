@@ -2,8 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="theme-color" content="#1d2a2f" />
 <title>Summer Co-Parenting Calendar</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<link rel="apple-touch-icon" href="icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz@0,6..72;1,6..72&display=swap" rel="stylesheet" />
@@ -268,11 +274,72 @@
   .btn-del { background: transparent; color: var(--a); border-color: var(--a-line); }
   .btn-del:hover { background: var(--a); color: #fff; }
 
-  @media (max-width: 460px) {
-    .cell { min-height: 78px; font-size: 10.8px; }
-    .note-text { -webkit-line-clamp: 2; font-size: 9.2px; }
-    .log-when { min-width: 74px; font-size: 11px; }
-    .log-who { min-width: 56px; font-size: 11.5px; }
+  /* ---------- Mobile: tablets ---------- */
+  @media (max-width: 768px) {
+    .wrap { padding: 20px clamp(8px, 2vw, 20px) 60px; }
+    .title { font-size: clamp(24px, 5.5vw, 36px); }
+    .grid { gap: 4px; }
+    .cell { min-height: 88px; padding: 5px 6px; border-radius: 7px; }
+    .daynum { font-size: 13px; }
+    .tag { font-size: 8.5px; padding: 1px 5px; }
+    .time { font-size: 10.5px; }
+    .note-text { font-size: 9px; -webkit-line-clamp: 2; }
+    .note-dot { width: 15px; height: 15px; right: 4px; bottom: 4px; }
+    .note-dot svg { width: 9px; height: 9px; }
+    .toolbar { gap: 6px; }
+    .btn { font-size: 12.5px; padding: 7px 12px; }
+    .log-item { font-size: 12.5px; gap: 8px; }
+    .panel { padding: 16px; }
+  }
+
+  /* ---------- Mobile: phones ---------- */
+  @media (max-width: 480px) {
+    .wrap { padding: 16px 8px 50px; }
+    .title { font-size: clamp(22px, 6vw, 30px); }
+    .subtitle { font-size: 13px; }
+    .legend { gap: 6px; margin-top: 12px; }
+    .chip { font-size: 11.5px; padding: 4px 8px; gap: 5px; }
+    .chip i { width: 9px; height: 9px; }
+    .toolbar { margin: 12px 0 18px; }
+    .btn { font-size: 12px; padding: 7px 10px; border-radius: 7px; }
+    .month-name { font-size: 18px; }
+    .dow { font-size: 9px; }
+    .grid { gap: 3px; }
+    .cell { min-height: 64px; padding: 4px 5px; font-size: 10px; border-radius: 6px; }
+    .daynum { font-size: 12px; }
+    .tag { font-size: 7.5px; padding: 1px 4px; letter-spacing: .01em; }
+    .tag-trans { font-size: 7px; }
+    .time { font-size: 9.5px; }
+    .note-text { font-size: 8.5px; -webkit-line-clamp: 2; padding-right: 16px; }
+    .note-dot { width: 14px; height: 14px; right: 3px; bottom: 3px; border-radius: 4px; }
+    .note-dot svg { width: 8px; height: 8px; }
+    .resolve { font-size: 9px; padding: 2px 7px; }
+    .panel { padding: 14px 12px; border-radius: 10px; margin-top: 20px; }
+    .panel h2 { font-size: 17px; }
+    .log-item { flex-direction: column; gap: 2px; padding: 8px 0; font-size: 12px; }
+    .log-when { min-width: auto; }
+    .log-who { min-width: auto; }
+    .modal { padding: 20px 18px 18px; border-radius: 12px; }
+    .modal h3 { font-size: 20px; }
+    .pp { font-size: 13px; padding: 7px 12px; }
+    .inp, .ta { font-size: 14px; padding: 9px 10px; }
+    .foot { font-size: 12px; }
+  }
+
+  /* ---------- Mobile: small phones ---------- */
+  @media (max-width: 360px) {
+    .cell { min-height: 54px; padding: 3px 4px; }
+    .daynum { font-size: 11px; }
+    .tag { font-size: 7px; padding: 0px 3px; }
+    .time { font-size: 9px; }
+    .note-text { display: none; }
+    .legend { gap: 4px; }
+    .chip { font-size: 10.5px; padding: 3px 6px; }
+  }
+
+  /* Safe area insets for notched phones */
+  @supports (padding: env(safe-area-inset-top)) {
+    .wrap { padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
   }
 </style>
 </head>

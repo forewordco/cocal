@@ -753,6 +753,7 @@ function render(){
 function escapeHtml(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 function renderSignIn(){
+  if (document.querySelector(".backdrop")) return;   // already open
   const isFirst = !viewer;
   const backdrop = el(`<div class="backdrop"></div>`);
   const modal = el(`
@@ -813,6 +814,7 @@ function renderSignIn(){
 }
 
 function renderEditor(k){
+  if (document.querySelector(".backdrop")) return;   // modal already open
   const e = data[k] || { parent:null, notes:"", time:"" };
   const draft = { parent: e.parent||"", time: e.time||"", notes: e.notes||"", unresolved: !!e.unresolved };
   const hasEntry = !!data[k];

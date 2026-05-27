@@ -290,6 +290,10 @@ const STORE_DATA = "coparent.schedule.v2";
 const STORE_LOG  = "coparent.changelog.v2";
 const STORE_VIEWER = "coparent.viewer.v1";
 
+const SB_URL = "https://tzucmfvivnnqbvkgwqif.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6dWNtZnZpdm5ucWJ2a2d3cWlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNDM1NTAsImV4cCI6MjA4NzYxOTU1MH0.Z7SPTehhd-5tzatpy5tJIlF8X0G5Ax7waR3a43U2f4Q";
+const SB_HEADERS = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "return=minimal" };
+
 const RANGE_START = "2026-05-25";   // Memorial Day 2026
 const RANGE_END   = "2026-09-07";   // Labor Day 2026
 
@@ -361,20 +365,13 @@ const SEED = {
 };
 
 // ---------- State ----------
-let data = loadData();
-let log  = loadLog();
-let viewer = loadViewer();   // string | null — set by sign-in modal
+let data = structuredClone(SEED);
+let log  = [{ ts: Date.now(), text: "Initial summer schedule created." }];
+let viewer = loadViewer();
 let editingKey = null;
-let signingIn = false;       // shows the sign-in modal when true
+let signingIn = false;
+let remoteLoaded = false;
 
-function loadData() {
-  try { const r = localStorage.getItem(STORE_DATA); if (r) return JSON.parse(r); } catch(e){}
-  return structuredClone(SEED);
-}
-function loadLog() {
-  try { const r = localStorage.getItem(STORE_LOG); if (r) return JSON.parse(r); } catch(e){}
-  return [{ ts: Date.now(), text: "Initial summer schedule created." }];
-}
 function loadViewer() {
   try { const r = localStorage.getItem(STORE_VIEWER); if (r) return r; } catch(e){}
   return null;
@@ -382,9 +379,56 @@ function loadViewer() {
 function saveViewer(name) {
   try { if (name) localStorage.setItem(STORE_VIEWER, name); else localStorage.removeItem(STORE_VIEWER); } catch(e){}
 }
-function saveData(){ try { localStorage.setItem(STORE_DATA, JSON.stringify(data)); } catch(e){} }
-function saveLog(){ try { localStorage.setItem(STORE_LOG, JSON.stringify(log)); } catch(e){} }
-function addLog(text){ log.unshift({ ts: Date.now(), text, who: viewer || null }); if (log.length > 200) log.pop(); saveLog(); }
+
+function saveToLocal() {
+  try { localStorage.setItem(STORE_DATA, JSON.stringify(data)); } catch(e){}
+  try { localStorage.setItem(STORE_LOG, JSON.stringify(log)); } catch(e){}
+}
+
+let _syncTimer = null;
+function syncToRemote() {
+  saveToLocal();
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => {
+    fetch(SB_URL + "/rest/v1/cocal?id=eq.main", {
+      method: "PATCH",
+      headers: SB_HEADERS,
+      body: JSON.stringify({ data, log, updated_at: new Date().toISOString() })
+    }).catch(() => {});
+  }, 400);
+}
+
+function saveData() { syncToRemote(); }
+function saveLog() { syncToRemote(); }
+function addLog(text) {
+  log.unshift({ ts: Date.now(), text, who: viewer || null });
+  if (log.length > 200) log.pop();
+  syncToRemote();
+}
+
+async function loadFromRemote() {
+  try {
+    const res = await fetch(SB_URL + "/rest/v1/cocal?id=eq.main&select=data,log", {
+      headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+    });
+    const rows = await res.json();
+    if (rows.length && rows[0].data && Object.keys(rows[0].data).length) {
+      data = rows[0].data;
+      if (rows[0].log && rows[0].log.length) log = rows[0].log;
+      saveToLocal();
+      remoteLoaded = true;
+      render();
+      return;
+    }
+  } catch(e) {}
+  // Fall back to localStorage, then seed
+  try { const r = localStorage.getItem(STORE_DATA); if (r) { data = JSON.parse(r); } } catch(e){}
+  try { const r = localStorage.getItem(STORE_LOG); if (r) { log = JSON.parse(r); } } catch(e){}
+  // Push seed/local data to remote so future loads work
+  syncToRemote();
+  remoteLoaded = true;
+  render();
+}
 
 // ---------- Date helpers ----------
 function ymd(y,m,d){ return y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0"); }
@@ -792,6 +836,7 @@ function renderEditor(k){
 
 if (!viewer) signingIn = true;
 render();
+loadFromRemote();
 </script>
 </body>
 </html>

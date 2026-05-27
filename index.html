@@ -19,6 +19,12 @@
     --a-line: #8bd3c8;
     --ba: #5b7a86;       /* both — slate teal */
     --ba-soft: #e2eaed;
+    --ba-tint: #e2eaed;
+    --ba-line: #c4d2d6;
+    --tbd: #b08830;      /* TBD — amber */
+    --tbd-soft: #f5ecd8;
+    --tbd-tint: #f5ecd8;
+    --tbd-line: #dbc89e;
     --ink: #1d2a2f;
     --purple: #6d3bd1;
     --purple-soft: #efe7fb;
@@ -71,6 +77,7 @@
   .sw-b { background: var(--b); }
   .sw-a { background: var(--a); }
   .sw-t { background: linear-gradient(135deg, var(--b) 0%, var(--b) 40%, var(--purple) 47%, var(--purple) 53%, var(--a) 60%, var(--a) 100%); }
+  .sw-tbd { background: var(--tbd); }
   .sw-q { background: repeating-linear-gradient(45deg, #aeb8b8, #aeb8b8 2px, #d2dada 2px, #d2dada 4px); }
 
   /* ---------- Toolbar ---------- */
@@ -150,8 +157,11 @@
   .c-b .tag { background: var(--b); color: #fff; } .c-b .time { color: var(--b); }
   .c-a { background: var(--a-tint); border-color: var(--a-line); }
   .c-a .tag { background: var(--a); color: #fff; } .c-a .time { color: var(--a); }
-  .c-ba { background: var(--ba-soft); border-color: #c4d2d6; }
+  .c-ba { background: var(--ba-tint); border-color: var(--ba-line); }
   .c-ba .tag { background: var(--ba); color: #fff; } .c-ba .time { color: var(--ba); }
+  .c-tbd { background: var(--tbd-tint); border-color: var(--tbd-line); }
+  .c-tbd .tag { background: var(--tbd); color: #fff; } .c-tbd .time { color: var(--tbd); }
+  .c-tbd .note-dot { background: rgba(176,136,48,.14); color: var(--tbd); }
   .c-none { background: var(--card); }
 
   /* Real gradient transition day */
@@ -245,6 +255,7 @@
   .pp.on.pb { background: var(--b); border-color: var(--b); }
   .pp.on.pa { background: var(--a); border-color: var(--a); }
   .pp.on.pba { background: var(--ba); border-color: var(--ba); }
+  .pp.on.ptbd { background: var(--tbd); border-color: var(--tbd); }
   .inp, .ta {
     width: 100%; font-family: 'Newsreader', serif; font-size: 15px; padding: 10px 12px;
     border-radius: 9px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); resize: vertical;
@@ -287,7 +298,7 @@ const MONTHS = [
 ];
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const PMETA = { B:{label:"Bobby",short:"B"}, A:{label:"Allie",short:"A"}, BA:{label:"Both / TBD",short:"B+A"} };
+const PMETA = { B:{label:"Bobby",short:"B"}, A:{label:"Allie",short:"A"}, BA:{label:"Both",short:"B+A"}, TBD:{label:"TBD",short:"TBD"} };
 
 const SEED = {
   "2026-05-27":{parent:"B",notes:"Desi all-day school (camping theme day). B picks up 3:15.",time:"3:15 PM"},
@@ -527,8 +538,8 @@ function render(){
   const root = document.getElementById("root");
   const trans = computeTransitions();
 
-  let b=0,a=0,q=0;
-  Object.entries(data).forEach(([k,v])=>{ if(!inRange(k))return; if(v.unresolved)q++; if(v.parent==="B")b++; else if(v.parent==="A")a++; });
+  let b=0,a=0,ba=0,tbd=0,q=0;
+  Object.entries(data).forEach(([k,v])=>{ if(!inRange(k))return; if(v.unresolved)q++; if(v.parent==="B")b++; else if(v.parent==="A")a++; else if(v.parent==="BA")ba++; else if(v.parent==="TBD")tbd++; });
   const tCount = Object.keys(trans).length;
 
   root.innerHTML = `
@@ -538,6 +549,8 @@ function render(){
       <div class="legend">
         <span class="chip"><i class="sw-b"></i> Bobby · ${b}</span>
         <span class="chip"><i class="sw-a"></i> Allie · ${a}</span>
+        ${ba?`<span class="chip"><i class="sw-a" style="background:var(--ba)"></i> Both · ${ba}</span>`:""}
+        ${tbd?`<span class="chip"><i class="sw-tbd"></i> TBD · ${tbd}</span>`:""}
         ${tCount?`<span class="chip"><i class="sw-t"></i> Transition · ${tCount}</span>`:""}
         ${q?`<span class="chip"><i class="sw-q"></i> Unresolved · ${q}</span>`:""}
       </div>
@@ -594,13 +607,13 @@ function render(){
       const unres = e && e.unresolved;
       const isTrans = !!t && !unres;
 
-      const pcls = e&&e.parent==="B"?"c-b":e&&e.parent==="A"?"c-a":e&&e.parent==="BA"?"c-ba":"c-none";
+      const pcls = e&&e.parent==="B"?"c-b":e&&e.parent==="A"?"c-a":e&&e.parent==="BA"?"c-ba":e&&e.parent==="TBD"?"c-tbd":"c-none";
       const cls = ["cell", active?"active":"out", pcls, unres?"c-unres":"", isTrans?"c-trans":""].join(" ");
 
       const cell = el(`<div class="${cls}" tabindex="${active?0:-1}"></div>`);
 
       if (isTrans) {
-        const soft = p => p==="B"?"var(--b-soft)":p==="A"?"var(--a-soft)":"var(--ba-soft)";
+        const soft = p => p==="B"?"var(--b-soft)":p==="A"?"var(--a-soft)":p==="TBD"?"var(--tbd-soft)":"var(--ba-soft)";
         // a real, smooth diagonal gradient between the two parents' tints
         cell.style.backgroundImage =
           `linear-gradient(135deg, ${soft(t.from)} 0%, ${soft(t.from)} 30%, ${soft(t.to)} 70%, ${soft(t.to)} 100%)`;
@@ -732,7 +745,7 @@ function renderEditor(k){
       <h3>${prettyDate(k)}</h3>
       <label class="flabel">Who has the kids?</label>
       <div class="pick">
-        ${[["","—"],["B","Bobby"],["A","Allie"],["BA","Both / TBD"]].map(([v,l])=>
+        ${[["","—"],["B","Bobby"],["A","Allie"],["BA","Both"],["TBD","TBD"]].map(([v,l])=>
           `<button class="pp ${draft.parent===v?"on":""} ${v?("p"+v.toLowerCase()):""}" data-v="${v}">${l}</button>`).join("")}
       </div>
       <label class="flabel">Pickup / dropoff time</label>

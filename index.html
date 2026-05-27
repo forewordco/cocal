@@ -286,13 +286,10 @@
 //  Auto-saves to localStorage. Logs every change. Exports .ics.
 // ============================================================
 
-const STORE_DATA = "coparent.schedule.v2";
-const STORE_LOG  = "coparent.changelog.v2";
-const STORE_VIEWER = "coparent.viewer.v1";
-
 const SB_URL = "https://tzucmfvivnnqbvkgwqif.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6dWNtZnZpdm5ucWJ2a2d3cWlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNDM1NTAsImV4cCI6MjA4NzYxOTU1MH0.Z7SPTehhd-5tzatpy5tJIlF8X0G5Ax7waR3a43U2f4Q";
 const SB_HEADERS = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "return=minimal" };
+const STORE_VIEWER = "coparent.viewer.v1";
 
 const RANGE_START = "2026-05-25";   // Memorial Day 2026
 const RANGE_END   = "2026-09-07";   // Labor Day 2026
@@ -366,12 +363,14 @@ const SEED = {
 
 // ---------- State ----------
 let data = structuredClone(SEED);
-let log  = [{ ts: Date.now(), text: "Initial summer schedule created." }];
-let viewer = loadViewer();
+let log  = [];
+let viewer = null;
 let editingKey = null;
 let signingIn = false;
-let remoteLoaded = false;
+let ready = false;
+let _saving = false;
 
+// Viewer name is the only thing stored locally (per-device identity)
 function loadViewer() {
   try { const r = localStorage.getItem(STORE_VIEWER); if (r) return r; } catch(e){}
   return null;
@@ -379,23 +378,24 @@ function loadViewer() {
 function saveViewer(name) {
   try { if (name) localStorage.setItem(STORE_VIEWER, name); else localStorage.removeItem(STORE_VIEWER); } catch(e){}
 }
+viewer = loadViewer();
 
-function saveToLocal() {
-  try { localStorage.setItem(STORE_DATA, JSON.stringify(data)); } catch(e){}
-  try { localStorage.setItem(STORE_LOG, JSON.stringify(log)); } catch(e){}
-}
-
+// ---- Remote persistence (Supabase only) ----
 let _syncTimer = null;
 function syncToRemote() {
-  saveToLocal();
   clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(() => {
-    fetch(SB_URL + "/rest/v1/cocal?id=eq.main", {
-      method: "PATCH",
-      headers: SB_HEADERS,
-      body: JSON.stringify({ data, log, updated_at: new Date().toISOString() })
-    }).catch(() => {});
-  }, 400);
+  _syncTimer = setTimeout(async () => {
+    if (_saving) return;
+    _saving = true;
+    try {
+      await fetch(SB_URL + "/rest/v1/cocal?id=eq.main", {
+        method: "PATCH",
+        headers: SB_HEADERS,
+        body: JSON.stringify({ data, log, updated_at: new Date().toISOString() })
+      });
+    } catch(e) { console.error("sync failed", e); }
+    _saving = false;
+  }, 300);
 }
 
 function saveData() { syncToRemote(); }
@@ -415,19 +415,53 @@ async function loadFromRemote() {
     if (rows.length && rows[0].data && Object.keys(rows[0].data).length) {
       data = rows[0].data;
       if (rows[0].log && rows[0].log.length) log = rows[0].log;
-      saveToLocal();
-      remoteLoaded = true;
-      render();
-      return;
+    } else {
+      // First ever load — push seed data to remote
+      await fetch(SB_URL + "/rest/v1/cocal?id=eq.main", {
+        method: "PATCH",
+        headers: SB_HEADERS,
+        body: JSON.stringify({ data, log: [{ ts: Date.now(), text: "Initial summer schedule created." }], updated_at: new Date().toISOString() })
+      });
+      log = [{ ts: Date.now(), text: "Initial summer schedule created." }];
     }
-  } catch(e) {}
-  // Fall back to localStorage, then seed
-  try { const r = localStorage.getItem(STORE_DATA); if (r) { data = JSON.parse(r); } } catch(e){}
-  try { const r = localStorage.getItem(STORE_LOG); if (r) { log = JSON.parse(r); } } catch(e){}
-  // Push seed/local data to remote so future loads work
-  syncToRemote();
-  remoteLoaded = true;
+  } catch(e) { console.error("load failed", e); }
+  ready = true;
   render();
+}
+
+// ---- Supabase Realtime (live sync between devices) ----
+function startRealtime() {
+  const wsUrl = SB_URL.replace("https://", "wss://") + "/realtime/v1/websocket?apikey=" + SB_KEY + "&vsn=1.0.0";
+  let ws, heartbeat;
+
+  function connect() {
+    ws = new WebSocket(wsUrl);
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ topic: "realtime:public:cocal", event: "phx_join", payload: { config: { postgres_changes: [{ event: "UPDATE", schema: "public", table: "cocal" }] } }, ref: "1" }));
+      heartbeat = setInterval(() => {
+        ws.send(JSON.stringify({ topic: "phoenix", event: "heartbeat", payload: {}, ref: "hb" }));
+      }, 30000);
+    };
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.event === "postgres_changes" && msg.payload?.data?.record) {
+          const rec = msg.payload.data.record;
+          if (rec.data && typeof rec.data === "object") {
+            // Only apply if it's actually different (avoid echo from our own save)
+            if (JSON.stringify(rec.data) !== JSON.stringify(data)) {
+              data = rec.data;
+              if (rec.log) log = rec.log;
+              render();
+            }
+          }
+        }
+      } catch(e) {}
+    };
+    ws.onclose = () => { clearInterval(heartbeat); setTimeout(connect, 3000); };
+    ws.onerror = () => { ws.close(); };
+  }
+  connect();
 }
 
 // ---------- Date helpers ----------
@@ -836,7 +870,7 @@ function renderEditor(k){
 
 if (!viewer) signingIn = true;
 render();
-loadFromRemote();
+loadFromRemote().then(() => startRealtime());
 </script>
 </body>
 </html>

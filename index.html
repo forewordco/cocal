@@ -279,9 +279,15 @@
   .btn-del { background: transparent; color: var(--a); border-color: var(--a-line); }
   .btn-del:hover { background: var(--a); color: #fff; }
   .auth-err { color: #c0392b; font-size: 13px; margin: 8px 0 0; }
-  .auth-toggle { font-size: 13.5px; color: var(--muted); margin-top: 14px; }
-  .auth-toggle a { color: var(--b); cursor: pointer; text-decoration: underline; }
-  .auth-toggle a:hover { color: var(--ink); }
+  .auth-tabs { display: flex; gap: 0; margin-bottom: 18px; border-bottom: 2px solid var(--line); }
+  .auth-tab {
+    flex: 1; text-align: center; padding: 10px 0; cursor: pointer;
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 14px;
+    color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -2px;
+    transition: .15s; background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .auth-tab:hover { color: var(--ink); }
+  .auth-tab.on { color: var(--ink); border-bottom-color: var(--ink); }
   .auth-loading { text-align: center; padding: 60px 20px; font-family: 'Fraunces', serif; font-size: 16px; color: var(--muted); }
   .user-pill {
     display: inline-flex; align-items: center; gap: 6px;
@@ -953,8 +959,10 @@ function renderSignIn(){
       </div>
     ` : `
       <div class="modal">
-        <h3>${isSignUp ? "Create account" : "Sign in"}</h3>
-        <p class="signin-sub">${isSignUp ? "Create an account to edit the calendar." : "Sign in to view and edit the calendar."}</p>
+        <div class="auth-tabs">
+          <button class="auth-tab ${isSignUp ? "" : "on"}" id="tab-signin">Sign in</button>
+          <button class="auth-tab ${isSignUp ? "on" : ""}" id="tab-signup">Create account</button>
+        </div>
         ${isSignUp ? `
           <label class="flabel">Display name</label>
           <input class="inp" id="auth-name" placeholder="e.g. Bobby, Allie, Grandma" autocomplete="name" />
@@ -965,11 +973,8 @@ function renderSignIn(){
         <input class="inp" id="auth-pass" type="password" placeholder="${isSignUp ? "Choose a password (6+ chars)" : "Your password"}" autocomplete="${isSignUp ? "new-password" : "current-password"}" />
         <div id="auth-err"></div>
         <div class="modal-actions">
-          <div class="right" style="margin-left:0;width:100%;display:flex;flex-direction:column;gap:8px;">
+          <div class="right" style="margin-left:0;width:100%;">
             <button class="btn btn-primary" id="auth-submit" style="width:100%;justify-content:center;">${isSignUp ? "Create account" : "Sign in"}</button>
-            <p class="auth-toggle">${isSignUp
-              ? 'Already have an account? <a id="auth-switch">Sign in</a>'
-              : 'No account? <a id="auth-switch">Create one</a>'}</p>
           </div>
         </div>
       </div>
@@ -1021,11 +1026,10 @@ function renderSignIn(){
       submitBtn.addEventListener("click", submit);
       passInp.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
       emailInp.addEventListener("keydown", e => { if (e.key === "Enter") passInp.focus(); });
+      if (nameInp) nameInp.addEventListener("keydown", e => { if (e.key === "Enter") emailInp.focus(); });
 
-      modal.querySelector("#auth-switch").addEventListener("click", () => {
-        isSignUp = !isSignUp;
-        mount();
-      });
+      modal.querySelector("#tab-signin").addEventListener("click", () => { if (isSignUp) { isSignUp = false; mount(); } });
+      modal.querySelector("#tab-signup").addEventListener("click", () => { if (!isSignUp) { isSignUp = true; mount(); } });
     }
 
     if (isLoggedIn) backdrop.addEventListener("click", e => { if (e.target === backdrop) close(); });

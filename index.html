@@ -295,6 +295,47 @@
     max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
+  /* ---------- Chat ---------- */
+  .chat-section {
+    margin-top: 20px; border-top: 1px solid var(--line); padding-top: 14px;
+  }
+  .chat-label {
+    font-family: 'Fraunces', serif; font-size: 11.5px; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 10px;
+  }
+  .chat-messages {
+    max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+    margin-bottom: 10px; padding-right: 4px;
+  }
+  .chat-empty { color: var(--muted); font-style: italic; font-size: 13px; }
+  .chat-msg {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 8px 10px; border-radius: 9px; background: var(--paper);
+    font-size: 13.5px; line-height: 1.4;
+  }
+  .chat-msg-head {
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .chat-msg-who {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 12px; color: var(--ink);
+  }
+  .chat-msg-when {
+    font-family: 'Fraunces', serif; font-size: 10.5px; color: var(--muted);
+  }
+  .chat-msg-text { color: var(--ink); }
+  .chat-input-row {
+    display: flex; gap: 6px; align-items: flex-end;
+  }
+  .chat-input-row .inp { flex: 1; font-size: 13.5px; padding: 8px 10px; }
+  .chat-send {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 13px;
+    padding: 8px 14px; border-radius: 9px; border: none;
+    background: var(--ink); color: #fff; cursor: pointer; transition: .15s;
+    white-space: nowrap;
+  }
+  .chat-send:hover { background: #2c3f46; }
+  .chat-send:disabled { opacity: .4; cursor: default; }
+
   /* ---------- Mobile: tablets ---------- */
   @media (max-width: 768px) {
     .wrap { padding: 20px clamp(8px, 2vw, 20px) 60px; }
@@ -540,6 +581,34 @@ async function signOut() {
   }
   authSession = null; authUser = null; viewer = null;
   saveSession(null);
+}
+
+// ---- Chat (per-day messages) ----
+async function loadMessages(dateKey) {
+  try {
+    const h = sbHeaders();
+    const res = await fetch(SB_URL + "/rest/v1/cocal_messages?date_key=eq." + dateKey + "&order=created_at.asc", {
+      headers: { "apikey": h.apikey, "Authorization": h.Authorization }
+    });
+    if (res.ok) return await res.json();
+  } catch(e) {}
+  return [];
+}
+
+async function sendMessage(dateKey, text) {
+  const h = sbHeaders();
+  const msg = {
+    date_key: dateKey,
+    user_email: authUser?.email || "anon",
+    user_name: viewer || "Unknown",
+    message: text.trim()
+  };
+  await fetch(SB_URL + "/rest/v1/cocal_messages", {
+    method: "POST",
+    headers: h,
+    body: JSON.stringify(msg)
+  });
+  return { ...msg, created_at: new Date().toISOString() };
 }
 
 // ---- Remote persistence (Supabase only) ----
@@ -1041,14 +1110,14 @@ function renderSignIn(){
 }
 
 function renderEditor(k){
-  if (document.querySelector(".backdrop")) return;   // modal already open
+  if (document.querySelector(".backdrop")) return;
   const e = data[k] || { parent:null, notes:"", time:"" };
   const draft = { parent: e.parent||"", time: e.time||"", notes: e.notes||"", unresolved: !!e.unresolved };
   const hasEntry = !!data[k];
 
   const backdrop = el(`<div class="backdrop"></div>`);
   const modal = el(`
-    <div class="modal">
+    <div class="modal" style="max-height:90vh;overflow-y:auto;">
       <h3>${prettyDate(k)}</h3>
       <label class="flabel">Who has the kids?</label>
       <div class="pick">
@@ -1058,13 +1127,23 @@ function renderEditor(k){
       <label class="flabel">Pickup / dropoff time</label>
       <input class="inp" id="f-time" value="${escapeHtml(draft.time)}" placeholder="e.g. 3:15 PM, Morning, before dinner" />
       <label class="flabel">Notes</label>
-      <textarea class="ta" id="f-notes" rows="3" placeholder="Anything worth remembering for this day…">${escapeHtml(draft.notes)}</textarea>
-      <label class="checkrow"><input type="checkbox" id="f-unres" ${draft.unresolved?"checked":""}/> Mark as unresolved (faded until a plan is set)</label>
+      <textarea class="ta" id="f-notes" rows="2" placeholder="Anything worth remembering for this day…">${escapeHtml(draft.notes)}</textarea>
+      <label class="checkrow"><input type="checkbox" id="f-unres" ${draft.unresolved?"checked":""}/> Mark as unresolved</label>
       <div class="modal-actions">
         ${hasEntry?`<button class="btn btn-del" id="f-del">Delete</button>`:""}
         <div class="right">
           <button class="btn btn-ghost" id="f-cancel">Cancel</button>
           <button class="btn btn-primary" id="f-save">Save</button>
+        </div>
+      </div>
+      <div class="chat-section">
+        <p class="chat-label">Chat</p>
+        <div class="chat-messages" id="chat-list">
+          <span class="chat-empty">Loading…</span>
+        </div>
+        <div class="chat-input-row">
+          <input class="inp" id="chat-inp" placeholder="Type a message…" />
+          <button class="chat-send" id="chat-send">Send</button>
         </div>
       </div>
     </div>
@@ -1073,6 +1152,7 @@ function renderEditor(k){
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
 
+  // --- Parent picker ---
   modal.querySelectorAll(".pp").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       draft.parent = btn.getAttribute("data-v");
@@ -1083,6 +1163,7 @@ function renderEditor(k){
     });
   });
 
+  // --- Form actions ---
   const close = ()=>{ backdrop.remove(); editingKey=null; };
   backdrop.addEventListener("click", e=>{ if(e.target===backdrop) close(); });
   modal.querySelector("#f-cancel").addEventListener("click", close);
@@ -1095,6 +1176,55 @@ function renderEditor(k){
   });
   const del = modal.querySelector("#f-del");
   if (del) del.addEventListener("click", ()=>{ backdrop.remove(); deleteEntry(k); });
+
+  // --- Chat ---
+  const chatList = modal.querySelector("#chat-list");
+  const chatInp = modal.querySelector("#chat-inp");
+  const chatSendBtn = modal.querySelector("#chat-send");
+
+  function renderMsg(msg) {
+    const when = msg.created_at ? new Date(msg.created_at) : new Date();
+    const timeStr = when.toLocaleDateString("en-US",{month:"short",day:"numeric"}) + " " +
+                    when.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+    return el(`
+      <div class="chat-msg">
+        <div class="chat-msg-head">
+          <span class="chat-msg-who">${escapeHtml(msg.user_name)}</span>
+          <span class="chat-msg-when">${timeStr}</span>
+        </div>
+        <div class="chat-msg-text">${escapeHtml(msg.message)}</div>
+      </div>
+    `);
+  }
+
+  function renderChatList(msgs) {
+    chatList.innerHTML = "";
+    if (!msgs.length) {
+      chatList.appendChild(el(`<span class="chat-empty">No messages yet.</span>`));
+    } else {
+      msgs.forEach(m => chatList.appendChild(renderMsg(m)));
+      chatList.scrollTop = chatList.scrollHeight;
+    }
+  }
+
+  let chatMessages = [];
+  loadMessages(k).then(msgs => { chatMessages = msgs; renderChatList(msgs); });
+
+  const doSend = async () => {
+    const text = chatInp.value.trim();
+    if (!text) return;
+    chatInp.value = "";
+    chatSendBtn.disabled = true;
+    try {
+      const msg = await sendMessage(k, text);
+      chatMessages.push(msg);
+      renderChatList(chatMessages);
+    } catch(e) {}
+    chatSendBtn.disabled = false;
+    chatInp.focus();
+  };
+  chatSendBtn.addEventListener("click", doSend);
+  chatInp.addEventListener("keydown", e => { if (e.key === "Enter") doSend(); });
 }
 
 async function boot() {

@@ -1085,15 +1085,15 @@ function render(){
 
       if (showGradient) {
         const dimOther = highlightMine && mp;
-        const soft = p => {
+        const gCol = p => {
           const isOther = dimOther && p !== mp;
-          if (p==="B") return isOther ? "#edf2f5" : "var(--b-soft)";
-          if (p==="A") return isOther ? "#eaf0ee" : "var(--a-soft)";
-          if (p==="TBD") return "var(--tbd-soft)";
-          return "var(--ba-soft)";
+          if (p==="B") return isOther ? "#eef1f0" : "rgba(31,111,178,.22)";
+          if (p==="A") return isOther ? "#eef1f0" : "rgba(17,168,155,.22)";
+          if (p==="TBD") return "rgba(176,136,48,.15)";
+          return "rgba(109,59,209,.15)";
         };
-        cell.style.backgroundImage =
-          `linear-gradient(135deg, ${soft(t.from)} 0%, ${soft(t.from)} 30%, ${soft(t.to)} 70%, ${soft(t.to)} 100%)`;
+        cell.style.background =
+          `linear-gradient(135deg, ${gCol(t.from)} 0%, ${gCol(t.from)} 38%, ${gCol(t.to)} 62%, ${gCol(t.to)} 100%)`;
       }
 
       let tagHtml;

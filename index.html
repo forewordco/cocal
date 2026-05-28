@@ -295,6 +295,47 @@
     max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
+  /* ---------- Main layout (calendar + sidebar) ---------- */
+  .main-layout {
+    display: grid; grid-template-columns: 1fr 280px; gap: 28px; align-items: start;
+  }
+  .sidebar {
+    position: sticky; top: 24px;
+  }
+  .sidebar-panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .sidebar-panel h3 {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 16px; margin: 0 0 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sidebar-panel h3 .badge {
+    font-size: 10px; font-weight: 700; background: var(--tbd); color: #fff;
+    padding: 2px 6px; border-radius: 999px; min-width: 18px; text-align: center;
+  }
+  .sidebar-item {
+    display: flex; flex-direction: column; gap: 2px; padding: 8px 0;
+    border-bottom: 1px solid var(--line); cursor: pointer; transition: .1s;
+    font-size: 13px;
+  }
+  .sidebar-item:last-child { border-bottom: none; }
+  .sidebar-item:hover { color: var(--b); }
+  .sidebar-item-date {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 12px; color: var(--ink);
+  }
+  .sidebar-item-detail { color: var(--muted); font-size: 12px; }
+  .sidebar-item-assignee {
+    font-family: 'Fraunces', serif; font-size: 10px; font-weight: 600;
+    color: var(--tbd); margin-top: 1px;
+  }
+  .sidebar-empty { color: var(--muted); font-style: italic; font-size: 13px; padding: 4px 0; }
+
+  @media (max-width: 900px) {
+    .main-layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; }
+  }
+
   /* ---------- Activity Panel ---------- */
   .activity {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
@@ -956,7 +997,10 @@ function render(){
     </div>
 
     <div id="activity"></div>
-    <div id="months"></div>
+    <div class="main-layout">
+      <div id="months"></div>
+      <aside class="sidebar" id="sidebar"></aside>
+    </div>
 
     <p class="foot">
       Tap any day to edit, add a pickup/dropoff time, or remove it. Gradient days are transitions — the kids change
@@ -1057,7 +1101,7 @@ function render(){
     monthsWrap.appendChild(sec);
   });
 
-  // Activity panel
+  // Activity panel (unseen chats + recent changes — NOT unresolved dates)
   const actWrap = root.querySelector("#activity");
   const unresolvedDates = Object.entries(data)
     .filter(([k,v]) => inRange(k) && v.unresolved && k >= TODAY)
@@ -1073,10 +1117,10 @@ function render(){
   });
   const unseenDateKeys = Object.keys(unseenByDate).sort();
 
-  const totalItems = unseenDateKeys.length + unresolvedDates.length + recentChanges.length;
-  if (totalItems > 0) {
+  const activityItems = unseenDateKeys.length + recentChanges.length;
+  if (activityItems > 0) {
     const panel = el(`<div class="activity"></div>`);
-    panel.appendChild(el(`<h2>Activity <span class="badge">${totalItems}</span></h2>`));
+    panel.appendChild(el(`<h2>Activity <span class="badge">${activityItems}</span></h2>`));
 
     // Unseen chats
     if (unseenDateKeys.length) {
@@ -1086,20 +1130,6 @@ function render(){
         const msgs = unseenByDate[dk];
         const last = msgs[0];
         const item = el(`<div class="act-item"><span class="act-date">${shortDate(dk)}</span><span class="act-detail"><span class="act-who">${escapeHtml(last.user_name)}</span>: ${escapeHtml(last.message.slice(0,60))}${last.message.length>60?"…":""}</span><span class="act-meta">${msgs.length > 1 ? msgs.length + " msgs" : "1 msg"}</span></div>`);
-        item.addEventListener("click", () => openEditor(dk));
-        sec.appendChild(item);
-      });
-      panel.appendChild(sec);
-    }
-
-    // Unresolved dates
-    if (unresolvedDates.length) {
-      const sec = el(`<div class="act-section"></div>`);
-      sec.appendChild(el(`<p class="act-heading"><span class="dot" style="background:var(--tbd)"></span> Unresolved dates</p>`));
-      unresolvedDates.forEach(([dk, v]) => {
-        const who = v.parent ? (PMETA[v.parent]?.label || v.parent) : "Unassigned";
-        const assignee = v.assignee ? " → " + v.assignee : "";
-        const item = el(`<div class="act-item"><span class="act-date">${shortDate(dk)}</span><span class="act-detail">${escapeHtml(who)}${escapeHtml(assignee)}</span><span class="act-meta">${escapeHtml(v.notes?.slice(0,40)||"")}</span></div>`);
         item.addEventListener("click", () => openEditor(dk));
         sec.appendChild(item);
       });
@@ -1118,6 +1148,28 @@ function render(){
 
     actWrap.appendChild(panel);
   }
+
+  // Right sidebar — unresolved dates
+  const sidebarWrap = root.querySelector("#sidebar");
+  const sidePanel = el(`<div class="sidebar-panel"></div>`);
+  sidePanel.appendChild(el(`<h3>Unresolved ${unresolvedDates.length ? `<span class="badge">${unresolvedDates.length}</span>` : ""}</h3>`));
+  if (unresolvedDates.length) {
+    unresolvedDates.forEach(([dk, v]) => {
+      const who = v.parent ? (PMETA[v.parent]?.label || v.parent) : "Unassigned";
+      const item = el(`<div class="sidebar-item"></div>`);
+      item.appendChild(el(`<span class="sidebar-item-date">${shortDate(dk)} · ${who}</span>`));
+      if (v.notes && v.notes.trim()) {
+        const preview = v.notes.trim().length > 50 ? v.notes.trim().slice(0,50) + "…" : v.notes.trim();
+        item.appendChild(el(`<span class="sidebar-item-detail">${escapeHtml(preview)}</span>`));
+      }
+      if (v.assignee) item.appendChild(el(`<span class="sidebar-item-assignee">→ ${escapeHtml(v.assignee)}</span>`));
+      item.addEventListener("click", () => openEditor(dk));
+      sidePanel.appendChild(item);
+    });
+  } else {
+    sidePanel.appendChild(el(`<span class="sidebar-empty">All dates resolved ✓</span>`));
+  }
+  sidebarWrap.appendChild(sidePanel);
 
   // Changelog
   const logWrap = root.querySelector("#log");

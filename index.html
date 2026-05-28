@@ -295,6 +295,17 @@
     max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
+  /* ---------- Highlight my days ---------- */
+  body.highlight-b .cell.c-a:not(.past) { opacity: .38; filter: saturate(.3); }
+  body.highlight-b .cell.c-a.past { opacity: .25; }
+  body.highlight-a .cell.c-b:not(.past) { opacity: .38; filter: saturate(.3); }
+  body.highlight-a .cell.c-b.past { opacity: .25; }
+  .btn-highlight { gap: 5px; }
+  .btn-highlight.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn-highlight .hl-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+
   /* ---------- Main layout (calendar + sidebar) ---------- */
   .main-layout {
     display: grid; grid-template-columns: 1fr 280px; gap: 28px; align-items: start;
@@ -595,6 +606,21 @@ let editingKey = null;
 let signingIn = false;
 let ready = false;
 let _saving = false;
+let highlightMine = false;
+try { highlightMine = localStorage.getItem("cocal.highlight") === "1"; } catch(e){}
+
+function myParentCode() {
+  const name = (viewer || "").toLowerCase();
+  const email = (authUser?.email || "").toLowerCase();
+  if (name.startsWith("bobby") || email.startsWith("bobby")) return "B";
+  if (name.startsWith("allie") || email.startsWith("allie")) return "A";
+  return null;
+}
+function toggleHighlight() {
+  highlightMine = !highlightMine;
+  try { localStorage.setItem("cocal.highlight", highlightMine ? "1" : "0"); } catch(e){}
+  render();
+}
 
 const TODAY = new Date().toISOString().slice(0,10);  // YYYY-MM-DD
 
@@ -969,6 +995,9 @@ function el(html){ const t = document.createElement("template"); t.innerHTML = h
 
 function render(){
   const root = document.getElementById("root");
+  const mp = myParentCode();
+  document.body.classList.remove("highlight-b", "highlight-a");
+  if (highlightMine && mp) document.body.classList.add("highlight-" + mp.toLowerCase());
   const trans = computeTransitions();
 
   let b=0,a=0,ba=0,tbd=0,q=0;
@@ -992,6 +1021,7 @@ function render(){
     <div class="toolbar">
       <button class="btn btn-primary" id="ics">⤓ Add to calendar (.ics)</button>
       <button class="btn" id="viewer">${authUser ? `<span class="user-pill">👤 ${escapeHtml(viewer)}</span>` : "Sign in"}</button>
+      ${mp ? `<button class="btn btn-highlight ${highlightMine?"on":""}" id="hl-toggle"><span class="hl-dot" style="background:var(--${mp.toLowerCase()})"></span>${highlightMine ? "My days" : "Highlight mine"}</button>` : ""}
       <span class="spacer"></span>
       <button class="btn btn-ghost" id="reset" title="Reset to original schedule">Reset</button>
     </div>
@@ -1188,6 +1218,8 @@ function render(){
   root.querySelector("#ics").addEventListener("click", downloadICS);
   root.querySelector("#reset").addEventListener("click", resetAll);
   root.querySelector("#viewer").addEventListener("click", () => { signingIn = true; render(); });
+  const hlBtn = root.querySelector("#hl-toggle");
+  if (hlBtn) hlBtn.addEventListener("click", toggleHighlight);
   root.querySelector("#clearlog").addEventListener("click", clearLog);
 
   if (signingIn) renderSignIn();

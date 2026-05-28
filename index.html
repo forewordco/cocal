@@ -296,10 +296,10 @@
   }
 
   /* ---------- Highlight my days ---------- */
-  body.highlight-b .cell.c-a:not(.past) { opacity: .38; filter: saturate(.3); }
-  body.highlight-b .cell.c-a.past { opacity: .25; }
-  body.highlight-a .cell.c-b:not(.past) { opacity: .38; filter: saturate(.3); }
-  body.highlight-a .cell.c-b.past { opacity: .25; }
+  body.highlight-b .cell.c-a:not(.past):not(.c-trans) { opacity: .38; filter: saturate(.3); }
+  body.highlight-b .cell.c-a.past:not(.c-trans) { opacity: .25; }
+  body.highlight-a .cell.c-b:not(.past):not(.c-trans) { opacity: .38; filter: saturate(.3); }
+  body.highlight-a .cell.c-b.past:not(.c-trans) { opacity: .25; }
   .btn-highlight { gap: 5px; }
   .btn-highlight.on { background: var(--ink); color: #fff; border-color: var(--ink); }
   .btn-highlight .hl-dot {

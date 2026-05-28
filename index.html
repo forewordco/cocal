@@ -1084,7 +1084,14 @@ function render(){
       const cell = el(`<div class="${cls}" tabindex="${active?0:-1}"></div>`);
 
       if (showGradient) {
-        const soft = p => p==="B"?"var(--b-soft)":p==="A"?"var(--a-soft)":p==="TBD"?"var(--tbd-soft)":"var(--ba-soft)";
+        const dimOther = highlightMine && mp;
+        const soft = p => {
+          const isOther = dimOther && p !== mp;
+          if (p==="B") return isOther ? "#edf2f5" : "var(--b-soft)";
+          if (p==="A") return isOther ? "#eaf0ee" : "var(--a-soft)";
+          if (p==="TBD") return "var(--tbd-soft)";
+          return "var(--ba-soft)";
+        };
         cell.style.backgroundImage =
           `linear-gradient(135deg, ${soft(t.from)} 0%, ${soft(t.from)} 30%, ${soft(t.to)} 70%, ${soft(t.to)} 100%)`;
       }

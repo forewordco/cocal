@@ -295,6 +295,51 @@
     max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
+  /* ---------- Activity Panel ---------- */
+  .activity {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 20px; margin-bottom: 28px;
+  }
+  .activity h2 {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; margin: 0 0 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .activity h2 .badge {
+    font-size: 11px; font-weight: 700; background: #c0392b; color: #fff;
+    padding: 2px 7px; border-radius: 999px; min-width: 20px; text-align: center;
+  }
+  .act-section { margin-bottom: 16px; }
+  .act-section:last-child { margin-bottom: 0; }
+  .act-heading {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 12px;
+    text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+    margin: 0 0 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .act-heading .dot {
+    width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+  }
+  .act-item {
+    display: flex; align-items: baseline; gap: 10px; padding: 6px 0;
+    font-size: 13px; border-bottom: 1px solid var(--line); cursor: pointer;
+    transition: .1s;
+  }
+  .act-item:last-child { border-bottom: none; }
+  .act-item:hover { color: var(--b); }
+  .act-date {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 12px;
+    color: var(--ink); white-space: nowrap; min-width: 70px;
+  }
+  .act-detail { flex: 1; color: var(--ink); }
+  .act-detail .act-who { font-weight: 600; }
+  .act-meta { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+  .act-none { color: var(--muted); font-style: italic; font-size: 13px; padding: 2px 0; }
+  .assignee-tag {
+    font-family: 'Fraunces', serif; font-size: 9px; font-weight: 600;
+    padding: 1px 5px; border-radius: 999px;
+    background: rgba(176,136,48,.18); color: var(--tbd);
+    position: relative; z-index: 2;
+  }
+
   /* ---------- Chat ---------- */
   .chat-section {
     margin-top: 20px; border-top: 1px solid var(--line); padding-top: 14px;
@@ -583,6 +628,29 @@ async function signOut() {
   saveSession(null);
 }
 
+// ---- Last-seen tracking ----
+function getLastSeen() {
+  try { const r = localStorage.getItem("cocal.lastSeen"); if (r) return r; } catch(e){}
+  return new Date(0).toISOString();
+}
+function updateLastSeen() {
+  try { localStorage.setItem("cocal.lastSeen", new Date().toISOString()); } catch(e){}
+}
+
+let unseenChats = [];  // populated on load
+async function loadUnseenChats() {
+  const since = getLastSeen();
+  const myEmail = authUser?.email || "";
+  try {
+    const h = sbHeaders();
+    const res = await fetch(SB_URL + "/rest/v1/cocal_messages?created_at=gt." + since + "&user_email=neq." + encodeURIComponent(myEmail) + "&order=created_at.desc&limit=20", {
+      headers: { "apikey": h.apikey, "Authorization": h.Authorization }
+    });
+    if (res.ok) { unseenChats = await res.json(); return; }
+  } catch(e) {}
+  unseenChats = [];
+}
+
 // ---- Chat (per-day messages) ----
 async function loadMessages(dateKey) {
   try {
@@ -814,6 +882,7 @@ function saveEntry(k, draft){
   const before = data[k];
   const cleaned = { parent: draft.parent || null, notes: (draft.notes||"").trim(), time: (draft.time||"").trim() };
   if (draft.unresolved) cleaned.unresolved = true;
+  if (draft.assignee && draft.assignee.trim()) cleaned.assignee = draft.assignee.trim();
   let changed = false, summary = "";
   if (!cleaned.parent && !cleaned.notes && !cleaned.time) {
     if (before) { delete data[k]; changed = true; summary = "Cleared " + shortDate(k) + " (was " + describeEntry(before) + ")."; }
@@ -886,6 +955,7 @@ function render(){
       <button class="btn btn-ghost" id="reset" title="Reset to original schedule">Reset</button>
     </div>
 
+    <div id="activity"></div>
     <div id="months"></div>
 
     <p class="foot">
@@ -961,7 +1031,8 @@ function render(){
       }
 
       cell.appendChild(el(`<div class="cell-top"><span class="daynum">${d}</span>${tagHtml}</div>`));
-      if (e&&e.time) cell.appendChild(el(`<div class="time">${escapeHtml(e.time)}</div>`));
+      if (e&&e.time && !isPast) cell.appendChild(el(`<div class="time">${escapeHtml(e.time)}</div>`));
+      if (e&&e.assignee && !isPast) cell.appendChild(el(`<span class="assignee-tag">→ ${escapeHtml(e.assignee)}</span>`));
       if (e&&e.notes && e.notes.trim()) {
         const full = e.notes.trim();
         const nd = el(`<span class="note-dot"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 3.5h16a.5.5 0 0 1 .5.5v10.6a.5.5 0 0 1-.146.353l-5.4 5.4a.5.5 0 0 1-.354.147H4a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5Z" fill="currentColor" fill-opacity="0.9"/><path d="M14 20.5V15a.5.5 0 0 1 .5-.5h5.5" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`);
@@ -985,6 +1056,68 @@ function render(){
     sec.appendChild(grid);
     monthsWrap.appendChild(sec);
   });
+
+  // Activity panel
+  const actWrap = root.querySelector("#activity");
+  const unresolvedDates = Object.entries(data)
+    .filter(([k,v]) => inRange(k) && v.unresolved && k >= TODAY)
+    .sort(([a],[b]) => a.localeCompare(b));
+  const recentChanges = log
+    .filter(item => item.who && item.who !== viewer)
+    .slice(0, 5);
+  // Group unseen chats by date
+  const unseenByDate = {};
+  unseenChats.forEach(m => {
+    if (!unseenByDate[m.date_key]) unseenByDate[m.date_key] = [];
+    unseenByDate[m.date_key].push(m);
+  });
+  const unseenDateKeys = Object.keys(unseenByDate).sort();
+
+  const totalItems = unseenDateKeys.length + unresolvedDates.length + recentChanges.length;
+  if (totalItems > 0) {
+    const panel = el(`<div class="activity"></div>`);
+    panel.appendChild(el(`<h2>Activity <span class="badge">${totalItems}</span></h2>`));
+
+    // Unseen chats
+    if (unseenDateKeys.length) {
+      const sec = el(`<div class="act-section"></div>`);
+      sec.appendChild(el(`<p class="act-heading"><span class="dot" style="background:#c0392b"></span> New messages</p>`));
+      unseenDateKeys.forEach(dk => {
+        const msgs = unseenByDate[dk];
+        const last = msgs[0];
+        const item = el(`<div class="act-item"><span class="act-date">${shortDate(dk)}</span><span class="act-detail"><span class="act-who">${escapeHtml(last.user_name)}</span>: ${escapeHtml(last.message.slice(0,60))}${last.message.length>60?"…":""}</span><span class="act-meta">${msgs.length > 1 ? msgs.length + " msgs" : "1 msg"}</span></div>`);
+        item.addEventListener("click", () => openEditor(dk));
+        sec.appendChild(item);
+      });
+      panel.appendChild(sec);
+    }
+
+    // Unresolved dates
+    if (unresolvedDates.length) {
+      const sec = el(`<div class="act-section"></div>`);
+      sec.appendChild(el(`<p class="act-heading"><span class="dot" style="background:var(--tbd)"></span> Unresolved dates</p>`));
+      unresolvedDates.forEach(([dk, v]) => {
+        const who = v.parent ? (PMETA[v.parent]?.label || v.parent) : "Unassigned";
+        const assignee = v.assignee ? " → " + v.assignee : "";
+        const item = el(`<div class="act-item"><span class="act-date">${shortDate(dk)}</span><span class="act-detail">${escapeHtml(who)}${escapeHtml(assignee)}</span><span class="act-meta">${escapeHtml(v.notes?.slice(0,40)||"")}</span></div>`);
+        item.addEventListener("click", () => openEditor(dk));
+        sec.appendChild(item);
+      });
+      panel.appendChild(sec);
+    }
+
+    // Recent changes by other user
+    if (recentChanges.length) {
+      const sec = el(`<div class="act-section"></div>`);
+      sec.appendChild(el(`<p class="act-heading"><span class="dot" style="background:var(--b)"></span> Recent changes by others</p>`));
+      recentChanges.forEach(item => {
+        sec.appendChild(el(`<div class="act-item" style="cursor:default"><span class="act-date">${prettyTs(item.ts).split(",")[0]}</span><span class="act-detail"><span class="act-who">${escapeHtml(item.who)}</span>: ${escapeHtml(item.text.slice(0,80))}</span></div>`));
+      });
+      panel.appendChild(sec);
+    }
+
+    actWrap.appendChild(panel);
+  }
 
   // Changelog
   const logWrap = root.querySelector("#log");
@@ -1112,7 +1245,7 @@ function renderSignIn(){
 function renderEditor(k){
   if (document.querySelector(".backdrop")) return;
   const e = data[k] || { parent:null, notes:"", time:"" };
-  const draft = { parent: e.parent||"", time: e.time||"", notes: e.notes||"", unresolved: !!e.unresolved };
+  const draft = { parent: e.parent||"", time: e.time||"", notes: e.notes||"", unresolved: !!e.unresolved, assignee: e.assignee||"" };
   const hasEntry = !!data[k];
 
   const backdrop = el(`<div class="backdrop"></div>`);
@@ -1129,6 +1262,13 @@ function renderEditor(k){
       <label class="flabel">Notes</label>
       <textarea class="ta" id="f-notes" rows="2" placeholder="Anything worth remembering for this day…">${escapeHtml(draft.notes)}</textarea>
       <label class="checkrow"><input type="checkbox" id="f-unres" ${draft.unresolved?"checked":""}/> Mark as unresolved</label>
+      <div id="f-assignee-row" style="${draft.unresolved ? "" : "display:none;"}margin-top:10px;">
+        <label class="flabel">Needs decision from</label>
+        <div class="pick">
+          ${["","Bobby","Allie","Both"].map(v =>
+            `<button class="pp assignee-pick ${draft.assignee===v?"on":""}" data-a="${v}">${v||"—"}</button>`).join("")}
+        </div>
+      </div>
       <div class="modal-actions">
         ${hasEntry?`<button class="btn btn-del" id="f-del">Delete</button>`:""}
         <div class="right">
@@ -1153,14 +1293,35 @@ function renderEditor(k){
   document.body.appendChild(backdrop);
 
   // --- Parent picker ---
-  modal.querySelectorAll(".pp").forEach(btn=>{
+  modal.querySelectorAll(".pp:not(.assignee-pick)").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       draft.parent = btn.getAttribute("data-v");
-      modal.querySelectorAll(".pp").forEach(b=>{
+      modal.querySelectorAll(".pp:not(.assignee-pick)").forEach(b=>{
         const v=b.getAttribute("data-v");
         b.classList.toggle("on", v===draft.parent);
       });
     });
+  });
+
+  // --- Assignee picker ---
+  modal.querySelectorAll(".assignee-pick").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      draft.assignee = btn.getAttribute("data-a");
+      modal.querySelectorAll(".assignee-pick").forEach(b=>{
+        b.classList.toggle("on", b.getAttribute("data-a")===draft.assignee);
+      });
+    });
+  });
+
+  // --- Toggle assignee row with unresolved checkbox ---
+  const unresCheck = modal.querySelector("#f-unres");
+  const assigneeRow = modal.querySelector("#f-assignee-row");
+  unresCheck.addEventListener("change", () => {
+    assigneeRow.style.display = unresCheck.checked ? "" : "none";
+    if (!unresCheck.checked) {
+      draft.assignee = "";
+      modal.querySelectorAll(".assignee-pick").forEach(b => b.classList.remove("on"));
+    }
   });
 
   // --- Form actions ---
@@ -1228,11 +1389,13 @@ function renderEditor(k){
 }
 
 async function boot() {
-  // Try to restore session from stored token
   await refreshToken();
   if (!authUser) signingIn = true;
   render();
   await loadFromRemote();
+  if (authUser) await loadUnseenChats();
+  render();   // re-render with activity panel data
+  updateLastSeen();
   startRealtime();
 }
 boot();

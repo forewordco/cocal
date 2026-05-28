@@ -133,6 +133,12 @@
   .cell.past .time { display: none; }
   .cell.past .note-dot { display: none; }
   .cell.past .resolve { display: none; }
+  .cell.today { border-width: 2.5px; box-shadow: 0 4px 14px var(--shadow); z-index: 1; }
+  .cell.today.c-b  { border-color: var(--b); background: color-mix(in oklch, var(--b-tint) 80%, var(--b) 20%); }
+  .cell.today.c-a  { border-color: var(--a); background: color-mix(in oklch, var(--a-tint) 80%, var(--a) 20%); }
+  .cell.today.c-ba { border-color: var(--ba); background: color-mix(in oklch, var(--ba-tint) 80%, var(--ba) 20%); }
+  .cell.today.c-tbd { border-color: var(--tbd); background: color-mix(in oklch, var(--tbd-tint) 80%, var(--tbd) 20%); }
+  .cell.today.c-none { border-color: var(--ink); }
   .cell.active { cursor: pointer; }
   .cell.active:hover { transform: translateY(-2px); box-shadow: 0 6px 16px var(--shadow); z-index: 2; }
 
@@ -1119,8 +1125,9 @@ function render(){
       const showGradient = isTrans && t.to !== "BA" && t.to !== "TBD";
 
       const isPast = k < TODAY;
+      const isToday = k === TODAY;
       const pcls = e&&e.parent==="B"?"c-b":e&&e.parent==="A"?"c-a":e&&e.parent==="BA"?"c-ba":e&&e.parent==="TBD"?"c-tbd":"c-none";
-      const cls = ["cell", active?"active":"out", pcls, unres?"c-unres":"", showGradient?"c-trans":"", isPast?"past":""].join(" ");
+      const cls = ["cell", active?"active":"out", pcls, unres?"c-unres":"", showGradient?"c-trans":"", isPast?"past":"", isToday?"today":""].join(" ");
 
       const cell = el(`<div class="${cls}" tabindex="${active?0:-1}"></div>`);
 

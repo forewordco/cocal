@@ -60,10 +60,12 @@
 
   /* ---------- Header ---------- */
   header.top {
+    position: sticky; top: 0; z-index: 35;
     display: flex; align-items: center;
     gap: 10px;
-    padding-bottom: 14px; margin-bottom: 10px;
+    padding: 14px 0; margin-bottom: 10px;
     border-bottom: 1.5px solid var(--line);
+    background: var(--paper);
   }
   .logo {
     display: flex; align-items: center; gap: 8px;
@@ -192,8 +194,8 @@
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .c-b .note-dot { background: rgba(31,111,178,.12); color: var(--b); }
-  .c-a .note-dot { background: rgba(17,168,155,.14); color: var(--a); }
+  .c-b .note-dot { background: var(--b-soft); color: var(--b); }
+  .c-a .note-dot { background: var(--a-soft); color: var(--a); }
   .c-ba .note-dot { background: rgba(91,122,134,.14); color: var(--ba); }
   .c-trans .note-dot { background: rgba(109,59,209,.12); color: var(--purple); }
 
@@ -334,6 +336,62 @@
   .pm-divider { border: none; border-top: 1px solid var(--line); margin: 0; }
   .pm-item.danger { color: #c0392b; }
   .pm-item.danger svg { color: #c0392b; }
+
+  /* ---------- Color picker in profile ---------- */
+  .pm-color-section {
+    padding: 8px 14px 10px;
+  }
+  .pm-color-label {
+    font-family: var(--fs); font-weight: 600; font-size: 10px;
+    text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .pm-color-row {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 6px; font-size: 12px; color: var(--ink);
+  }
+  .pm-color-row:last-child { margin-bottom: 0; }
+  .pm-color-name { font-weight: 500; min-width: 40px; }
+  .pm-swatches { display: flex; gap: 4px; margin-left: auto; }
+  .pm-swatch {
+    width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent;
+    cursor: pointer; transition: .1s; flex-shrink: 0;
+  }
+  .pm-swatch:hover { transform: scale(1.15); }
+  .pm-swatch.active { border-color: var(--ink); box-shadow: 0 0 0 1px #fff inset; }
+
+  /* ---------- Confirm modal ---------- */
+  .confirm-backdrop {
+    position: fixed; inset: 0; background: rgba(20,35,40,.35); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 55;
+    animation: fade .12s ease;
+  }
+  .confirm-box {
+    background: var(--card); border-radius: 14px; width: min(380px, 100%);
+    padding: 22px; box-shadow: 0 20px 50px rgba(15,40,45,.25); border: 1px solid var(--line);
+    animation: pop .15s ease; text-align: center;
+  }
+  .confirm-box h3 {
+    font-family: var(--ff); font-weight: 600; font-size: 18px; margin: 0 0 8px;
+  }
+  .confirm-box p {
+    font-size: 13px; color: var(--muted); line-height: 1.5; margin: 0 0 18px;
+  }
+  .confirm-actions { display: flex; gap: 8px; justify-content: center; }
+  .confirm-actions .btn { min-width: 100px; justify-content: center; }
+
+  /* ---------- Backups page ---------- */
+  .backup-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px;
+  }
+  .backup-item:last-child { border-bottom: none; }
+  .backup-name { font-weight: 600; flex: 1; }
+  .backup-date { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .backup-actions { display: flex; gap: 6px; }
+  .backup-none { color: var(--muted); font-style: italic; font-size: 13px; padding: 10px 0; }
+  .backup-create-row { display: flex; gap: 6px; margin-bottom: 16px; }
+  .backup-create-row .inp { flex: 1; font-size: 13px; padding: 7px 9px; }
 
   /* ---------- Changelog page ---------- */
   .changelog-page {
@@ -693,6 +751,107 @@ let ready = false;
 let _saving = false;
 let highlightMine = false;
 try { highlightMine = localStorage.getItem("cocal.highlight") === "1"; } catch(e){}
+
+// ---------- Color Themes ----------
+const COLOR_PRESETS = {
+  B: [
+    { label:"Cerulean", hue:"#1f6fb2", soft:"#cfe4f4", tint:"#d4e6f5", line:"#9cc6e8" },
+    { label:"Indigo",   hue:"#4f46e5", soft:"#e0e0fc", tint:"#e4e3fd", line:"#a5a2f0" },
+    { label:"Slate",    hue:"#475569", soft:"#e2e8f0", tint:"#e8ecf1", line:"#94a3b8" },
+    { label:"Emerald",  hue:"#059669", soft:"#d1fae5", tint:"#d5f5e9", line:"#6ee7b7" },
+    { label:"Rose",     hue:"#e11d48", soft:"#ffe4ec", tint:"#fde8ef", line:"#fda4af" },
+    { label:"Orange",   hue:"#ea580c", soft:"#ffedd5", tint:"#fff0da", line:"#fdba74" },
+  ],
+  A: [
+    { label:"Teal",     hue:"#11a89b", soft:"#c4e8e1", tint:"#cfece5", line:"#8bd3c8" },
+    { label:"Violet",   hue:"#7c3aed", soft:"#ede9fe", tint:"#eeebfd", line:"#a78bfa" },
+    { label:"Amber",    hue:"#d97706", soft:"#fef3c7", tint:"#fef5ce", line:"#fbbf24" },
+    { label:"Sky",      hue:"#0284c7", soft:"#e0f2fe", tint:"#e4f4fe", line:"#7dd3fc" },
+    { label:"Pink",     hue:"#db2777", soft:"#fce7f3", tint:"#fde9f4", line:"#f9a8d4" },
+    { label:"Lime",     hue:"#65a30d", soft:"#ecfccb", tint:"#eefcd2", line:"#a3e635" },
+  ],
+  BA: [
+    { label:"Purple",   hue:"#6d3bd1", soft:"#e0d0f7", tint:"#d8c6f4", line:"#b49de0" },
+    { label:"Fuchsia",  hue:"#c026d3", soft:"#fae8ff", tint:"#f9e5ff", line:"#e879f9" },
+    { label:"Cyan",     hue:"#0891b2", soft:"#cffafe", tint:"#d4fbfe", line:"#67e8f9" },
+    { label:"Red",      hue:"#dc2626", soft:"#fee2e2", tint:"#fee5e5", line:"#fca5a5" },
+    { label:"Teal",     hue:"#0d9488", soft:"#ccfbf1", tint:"#d2fcf3", line:"#5eead4" },
+    { label:"Gray",     hue:"#6b7280", soft:"#f3f4f6", tint:"#f5f5f7", line:"#d1d5db" },
+  ]
+};
+
+function loadColors() {
+  try { const c = localStorage.getItem("cocal.colors"); return c ? JSON.parse(c) : {}; } catch(e){ return {}; }
+}
+function saveColors(c) {
+  try { localStorage.setItem("cocal.colors", JSON.stringify(c)); } catch(e){}
+}
+function applyColors() {
+  const c = loadColors();
+  const r = document.documentElement.style;
+  if (c.B) { r.setProperty("--b", c.B.hue); r.setProperty("--b-soft", c.B.soft); r.setProperty("--b-tint", c.B.tint); r.setProperty("--b-line", c.B.line); }
+  if (c.A) { r.setProperty("--a", c.A.hue); r.setProperty("--a-soft", c.A.soft); r.setProperty("--a-tint", c.A.tint); r.setProperty("--a-line", c.A.line); }
+  if (c.BA) { r.setProperty("--ba", c.BA.hue); r.setProperty("--ba-soft", c.BA.soft); r.setProperty("--ba-tint", c.BA.tint); r.setProperty("--ba-line", c.BA.line); }
+}
+applyColors(); // apply on load
+
+// ---------- Confirm Dialog ----------
+function showConfirm(title, message, onYes) {
+  const bg = el(`<div class="confirm-backdrop"></div>`);
+  const box = el(`<div class="confirm-box"><h3>${title}</h3><p>${message}</p><div class="confirm-actions"><button class="btn" id="cf-no">Cancel</button><button class="btn btn-primary" id="cf-yes" style="background:#c0392b;border-color:#c0392b">Reset</button></div></div>`);
+  bg.appendChild(box);
+  document.body.appendChild(bg);
+  box.querySelector("#cf-no").addEventListener("click", () => bg.remove());
+  box.querySelector("#cf-yes").addEventListener("click", () => { bg.remove(); onYes(); });
+  bg.addEventListener("click", (e) => { if (e.target === bg) bg.remove(); });
+}
+
+// ---------- Backups ----------
+async function loadBackups() {
+  try {
+    const h = sbHeaders();
+    const res = await fetch(SB_URL + "/rest/v1/cocal?select=id,data,log,updated_at&id=like.backup-*&order=updated_at.desc", {
+      headers: { "apikey": h.apikey, "Authorization": h.Authorization }
+    });
+    if (res.ok) return await res.json();
+  } catch(e) {}
+  return [];
+}
+
+async function createBackup(name) {
+  const id = "backup-" + Date.now();
+  const label = name.trim() || new Date().toLocaleDateString("en-US", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" });
+  const h = sbHeaders();
+  await fetch(SB_URL + "/rest/v1/cocal", {
+    method: "POST",
+    headers: { ...h, "Prefer": "return=minimal" },
+    body: JSON.stringify({ id, data: structuredClone(data), log: structuredClone(log), updated_at: new Date().toISOString() })
+  });
+  addLog("Created backup: " + label);
+  return { id, label, updated_at: new Date().toISOString() };
+}
+
+async function restoreBackup(backupId) {
+  const h = sbHeaders();
+  const res = await fetch(SB_URL + "/rest/v1/cocal?id=eq." + encodeURIComponent(backupId) + "&select=data,log", {
+    headers: { "apikey": h.apikey, "Authorization": h.Authorization }
+  });
+  if (!res.ok) return false;
+  const rows = await res.json();
+  if (!rows.length || !rows[0].data) return false;
+  data = rows[0].data;
+  log = rows[0].log || [];
+  addLog("Restored from backup.");
+  saveData(); saveLog(); render();
+  return true;
+}
+
+async function deleteBackup(backupId) {
+  const h = sbHeaders();
+  await fetch(SB_URL + "/rest/v1/cocal?id=eq." + encodeURIComponent(backupId), {
+    method: "DELETE", headers: h
+  });
+}
 
 function myParentCode() {
   const name = (viewer || "").toLowerCase();
@@ -1143,10 +1302,15 @@ function resolveEntry(k){
 }
 
 function resetAll(){
-  if (!confirm("Reset the whole calendar back to the original schedule? Your edits and changelog will be lost.")) return;
-  data = structuredClone(SEED);
-  log = [{ ts: Date.now(), text: "Calendar reset to the original summer schedule." }];
-  saveData(); saveLog(); render();
+  showConfirm(
+    "Reset Calendar",
+    "This will revert every date back to the original schedule. All edits will be lost. Consider creating a backup first.",
+    () => {
+      data = structuredClone(SEED);
+      log = [{ ts: Date.now(), text: "Calendar reset to the original summer schedule." }];
+      saveData(); saveLog(); render();
+    }
+  );
 }
 
 function clearLog(){
@@ -1238,10 +1402,11 @@ function render(){
         const dimOther = highlightMine && mp;
         const gCol = p => {
           const isOther = dimOther && p !== mp;
-          if (p==="B") return isOther ? "#eef1f0" : "rgba(31,111,178,.22)";
-          if (p==="A") return isOther ? "#eef1f0" : "rgba(17,168,155,.22)";
-          if (p==="TBD") return "rgba(176,136,48,.15)";
-          return "rgba(109,59,209,.15)";
+          if (isOther) return "#eef1f0";
+          if (p==="B") return "var(--b-tint)";
+          if (p==="A") return "var(--a-tint)";
+          if (p==="TBD") return "var(--tbd-tint)";
+          return "var(--ba-tint)";
         };
         cell.style.background =
           `linear-gradient(135deg, ${gCol(t.from)} 0%, ${gCol(t.from)} 38%, ${gCol(t.to)} 62%, ${gCol(t.to)} 100%)`;
@@ -1423,7 +1588,7 @@ function render(){
   avatarBtn.addEventListener("click", () => {
     if (!authUser) { signingIn = true; render(); return; }
     togglePopup("tg-profile", () => {
-      const p = el(`<div class="popup profile-menu" style="width:220px"></div>`);
+      const p = el(`<div class="popup profile-menu" style="width:260px"></div>`);
       p.appendChild(el(`<div class="profile-menu-user">${escapeHtml(viewer)}<small>${escapeHtml(authUser.email)}</small></div>`));
 
       // Highlight toggle
@@ -1440,12 +1605,41 @@ function render(){
         p.appendChild(notifItem);
       }
 
+      // Color pickers
+      p.appendChild(el(`<hr class="pm-divider">`));
+      const colorSec = el(`<div class="pm-color-section"></div>`);
+      colorSec.appendChild(el(`<div class="pm-color-label">Colors</div>`));
+      const currentColors = loadColors();
+      [{key:"B", name:"Bobby"}, {key:"A", name:"Allie"}, {key:"BA", name:"Both"}].forEach(({key, name}) => {
+        const row = el(`<div class="pm-color-row"><span class="pm-color-name">${name}</span><div class="pm-swatches"></div></div>`);
+        const swatchWrap = row.querySelector(".pm-swatches");
+        COLOR_PRESETS[key].forEach(preset => {
+          const active = currentColors[key]?.hue === preset.hue;
+          const sw = el(`<div class="pm-swatch ${active?"active":""}" title="${preset.label}" style="background:${preset.hue}"></div>`);
+          sw.addEventListener("click", () => {
+            const c = loadColors();
+            c[key] = preset;
+            saveColors(c);
+            applyColors();
+            closePopups(); render();
+          });
+          swatchWrap.appendChild(sw);
+        });
+        colorSec.appendChild(row);
+      });
+      p.appendChild(colorSec);
+
       p.appendChild(el(`<hr class="pm-divider">`));
 
       // Export ICS
       const icsItem = el(`<button class="pm-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3v10M6 9l4 4 4-4"/><path d="M3 14v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2"/></svg> Export .ics</button>`);
       icsItem.addEventListener("click", () => { closePopups(); downloadICS(); });
       p.appendChild(icsItem);
+
+      // Backups
+      const backupItem = el(`<button class="pm-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5h14v10H3z"/><path d="M7 5V3h6v2"/><path d="M8 10h4"/></svg> Backups</button>`);
+      backupItem.addEventListener("click", () => { closePopups(); showBackupsPage(); });
+      p.appendChild(backupItem);
 
       // Reset
       const resetItem = el(`<button class="pm-item"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 10a7 7 0 0 1 12.9-3.5M17 10a7 7 0 0 1-12.9 3.5"/><path d="M16 3v4h-4M4 17v-4h4"/></svg> Reset schedule</button>`);
@@ -1505,6 +1699,81 @@ function showChangelogPage() {
   page.appendChild(inner);
   document.body.appendChild(page);
   // Close on Escape
+  const esc = (e) => { if (e.key === "Escape") { page.remove(); document.removeEventListener("keydown", esc); } };
+  document.addEventListener("keydown", esc);
+}
+
+async function showBackupsPage() {
+  if (document.querySelector(".changelog-page")) return;
+  const page = el(`<div class="changelog-page"></div>`);
+  const inner = el(`<div class="changelog-inner"></div>`);
+
+  const header = el(`<div class="changelog-header"></div>`);
+  const backBtn = el(`<button class="changelog-back">← Back</button>`);
+  backBtn.addEventListener("click", () => page.remove());
+  header.appendChild(backBtn);
+  header.appendChild(el(`<h2 class="changelog-title">Backups</h2>`));
+  inner.appendChild(header);
+
+  // Create new backup
+  const createRow = el(`<div class="backup-create-row"></div>`);
+  const nameInp = el(`<input class="inp" placeholder="Backup name (optional)" />`);
+  const createBtn = el(`<button class="btn btn-primary">Save backup</button>`);
+  createBtn.addEventListener("click", async () => {
+    createBtn.textContent = "Saving…";
+    createBtn.disabled = true;
+    await createBackup(nameInp.value);
+    page.remove();
+    showBackupsPage();
+  });
+  createRow.appendChild(nameInp);
+  createRow.appendChild(createBtn);
+  inner.appendChild(createRow);
+
+  inner.appendChild(el(`<p style="color:var(--muted);font-size:12px;margin-bottom:12px;">Backups save a snapshot of the current schedule. You can restore any backup at any time.</p>`));
+
+  // List existing backups
+  const backups = await loadBackups();
+  if (!backups.length) {
+    inner.appendChild(el(`<p class="backup-none">No backups yet. Create one above to save the current state.</p>`));
+  } else {
+    backups.forEach(b => {
+      const label = b.id.replace("backup-", "");
+      const ts = b.updated_at ? new Date(b.updated_at).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit" }) : label;
+      // Try to extract name from log
+      const logEntry = (b.log || []).find(l => l.text && l.text.startsWith("Created backup:"));
+      const name = logEntry ? logEntry.text.replace("Created backup: ", "") : ts;
+      const entries = b.data ? Object.keys(b.data).length : 0;
+
+      const item = el(`<div class="backup-item"></div>`);
+      item.appendChild(el(`<span class="backup-name">${escapeHtml(name)}</span>`));
+      item.appendChild(el(`<span class="backup-date">${entries} days · ${ts}</span>`));
+      const actions = el(`<div class="backup-actions"></div>`);
+
+      const restoreBtn = el(`<button class="btn" style="font-size:11px;padding:4px 10px;">Restore</button>`);
+      restoreBtn.addEventListener("click", () => {
+        showConfirm("Restore Backup", "Replace the current schedule with this backup? You may want to save a backup of the current state first.", async () => {
+          await restoreBackup(b.id);
+          page.remove();
+        });
+      });
+      actions.appendChild(restoreBtn);
+
+      const delBtn = el(`<button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;color:#c0392b;">Delete</button>`);
+      delBtn.addEventListener("click", async () => {
+        delBtn.textContent = "…";
+        await deleteBackup(b.id);
+        item.remove();
+      });
+      actions.appendChild(delBtn);
+
+      item.appendChild(actions);
+      inner.appendChild(item);
+    });
+  }
+
+  page.appendChild(inner);
+  document.body.appendChild(page);
   const esc = (e) => { if (e.key === "Escape") { page.remove(); document.removeEventListener("keydown", esc); } };
   document.addEventListener("keydown", esc);
 }

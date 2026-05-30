@@ -504,6 +504,10 @@
     .chip { font-size: 10.5px; padding: 3px 6px; }
   }
 
+  /* ---------- Push notification toggle ---------- */
+  .btn-notif { gap: 5px; }
+  .btn-notif.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+
   /* Safe area insets for notched phones */
   @supports (padding: env(safe-area-inset-top)) {
     .wrap { padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
@@ -523,6 +527,8 @@
 const SB_URL = "https://tzucmfvivnnqbvkgwqif.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6dWNtZnZpdm5ucWJ2a2d3cWlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNDM1NTAsImV4cCI6MjA4NzYxOTU1MH0.Z7SPTehhd-5tzatpy5tJIlF8X0G5Ax7waR3a43U2f4Q";
 const SB_HEADERS_ANON = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "return=minimal" };
+const VAPID_PUBLIC = "BHU0pM9pUZ6RljVzTHb_v0i1p935M2Jw8qNOAkZ0mozSjACkkdnOFrD5QpoQ2VjbJbbFTm-nZaNop4-rpXH07ZM";
+const PUSH_FN_URL = SB_URL + "/functions/v1/send-push";
 function sbHeaders() {
   const tok = authSession?.access_token;
   return tok
@@ -749,6 +755,86 @@ function getLastSeen() {
 }
 function updateLastSeen() {
   try { localStorage.setItem("cocal.lastSeen", new Date().toISOString()); } catch(e){}
+}
+
+// ---- Push notifications ----
+let pushSupported = ("serviceWorker" in navigator) && ("PushManager" in window);
+let pushSubscription = null;
+
+async function registerSW() {
+  if (!pushSupported) return null;
+  try {
+    const reg = await navigator.serviceWorker.register("sw.js");
+    return reg;
+  } catch(e) { console.error("SW registration failed", e); return null; }
+}
+
+async function getPushSubscription() {
+  const reg = await navigator.serviceWorker.ready;
+  return await reg.pushManager.getSubscription();
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return new Uint8Array([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function subscribePush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
+    });
+    pushSubscription = sub;
+    // Save to Supabase
+    const h = sbHeaders();
+    await fetch(SB_URL + "/rest/v1/push_subscriptions", {
+      method: "POST",
+      headers: { ...h, "Prefer": "return=minimal,resolution=merge-duplicates" },
+      body: JSON.stringify({
+        user_email: authUser?.email || "anon",
+        subscription: sub.toJSON()
+      })
+    });
+    render();
+    return true;
+  } catch(e) { console.error("Push subscribe failed", e); return false; }
+}
+
+async function unsubscribePush() {
+  try {
+    if (pushSubscription) {
+      const endpoint = pushSubscription.endpoint;
+      await pushSubscription.unsubscribe();
+      // Remove from Supabase
+      const h = sbHeaders();
+      await fetch(SB_URL + "/rest/v1/push_subscriptions?subscription->>endpoint=eq." + encodeURIComponent(endpoint), {
+        method: "DELETE",
+        headers: h
+      });
+    }
+    pushSubscription = null;
+    render();
+  } catch(e) { console.error("Push unsubscribe failed", e); }
+}
+
+async function notifyPush(type, message, dateKey) {
+  try {
+    await fetch(PUSH_FN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type,
+        sender_email: authUser?.email || "",
+        sender_name: viewer || "Someone",
+        message,
+        date_key: dateKey || null
+      })
+    });
+  } catch(e) { /* silent */ }
 }
 
 let unseenChats = [];  // populated on load
@@ -1009,7 +1095,7 @@ function saveEntry(k, draft){
       if (!before) summary = "Added " + shortDate(k) + ": " + afterDesc + ".";
     }
   }
-  if (changed) { saveData(); addLog(summary); }
+  if (changed) { saveData(); addLog(summary); notifyPush("change", summary); }
   editingKey = null; render();
 }
 
@@ -1069,6 +1155,7 @@ function render(){
       <button class="btn btn-primary" id="ics">⤓ Add to calendar (.ics)</button>
       <button class="btn" id="viewer">${authUser ? `<span class="user-pill">👤 ${escapeHtml(viewer)}</span>` : "Sign in"}</button>
       ${mp ? `<button class="btn btn-highlight ${highlightMine?"on":""}" id="hl-toggle"><span class="hl-dot" style="background:var(--${mp.toLowerCase()})"></span>${highlightMine ? "My days" : "Highlight mine"}</button>` : ""}
+      ${pushSupported && authUser ? `<button class="btn btn-notif ${pushSubscription?"on":""}" id="notif-toggle">${pushSubscription ? "🔔 Notifications on" : "🔕 Notifications"}</button>` : ""}
       <span class="spacer"></span>
       <button class="btn btn-ghost" id="reset" title="Reset to original schedule">Reset</button>
     </div>
@@ -1275,6 +1362,8 @@ function render(){
   root.querySelector("#viewer").addEventListener("click", () => { signingIn = true; render(); });
   const hlBtn = root.querySelector("#hl-toggle");
   if (hlBtn) hlBtn.addEventListener("click", toggleHighlight);
+  const notifBtn = root.querySelector("#notif-toggle");
+  if (notifBtn) notifBtn.addEventListener("click", () => pushSubscription ? unsubscribePush() : subscribePush());
   root.querySelector("#clearlog").addEventListener("click", clearLog);
 
   if (signingIn) renderSignIn();
@@ -1519,6 +1608,7 @@ function renderEditor(k){
       const msg = await sendMessage(k, text);
       chatMessages.push(msg);
       renderChatList(chatMessages);
+      notifyPush("chat", text, k);
     } catch(e) {}
     chatSendBtn.disabled = false;
     chatInp.focus();
@@ -1530,6 +1620,11 @@ function renderEditor(k){
 async function boot() {
   await refreshToken();
   if (!authUser) signingIn = true;
+  // Register service worker and check existing push subscription
+  await registerSW();
+  if (pushSupported) {
+    try { pushSubscription = await getPushSubscription(); } catch(e) {}
+  }
   render();
   await loadFromRemote();
   if (authUser) await loadUnseenChats();

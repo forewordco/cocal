@@ -866,7 +866,8 @@ function toggleHighlight() {
   render();
 }
 
-const TODAY = new Date().toISOString().slice(0,10);  // YYYY-MM-DD
+const _now = new Date();
+const TODAY = _now.getFullYear() + "-" + String(_now.getMonth()+1).padStart(2,"0") + "-" + String(_now.getDate()).padStart(2,"0");
 
 function loadSession() {
   try { const r = localStorage.getItem("cocal.session"); if (r) return JSON.parse(r); } catch(e){}

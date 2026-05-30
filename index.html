@@ -207,39 +207,88 @@
   }
   .resolve:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
 
-  /* ---------- Changelog ---------- */
-  .panel {
+  /* ---------- Toolbar popups ---------- */
+  .tb-group { position: relative; display: inline-flex; }
+  .tb-icon {
+    font-family: var(--fs); font-weight: 500; font-size: 12px;
+    padding: 6px 10px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--muted);
+    transition: .12s; display: inline-flex; align-items: center; gap: 5px;
+    position: relative;
+  }
+  .tb-icon:hover { border-color: #b8c4c4; color: var(--ink); }
+  .tb-icon.has-items { color: var(--ink); }
+  .tb-icon svg { width: 15px; height: 15px; display: block; }
+  .tb-badge {
+    position: absolute; top: -5px; right: -5px;
+    font-size: 9px; font-weight: 700; min-width: 16px; height: 16px;
+    padding: 0 4px; border-radius: 8px; text-align: center; line-height: 16px;
+    color: #fff; pointer-events: none;
+  }
+  .tb-badge-red { background: #c0392b; }
+  .tb-badge-amber { background: var(--tbd); }
+  .tb-badge-blue { background: var(--b); }
+  .popup {
+    position: absolute; top: calc(100% + 6px); right: 0;
+    width: 340px; max-height: 420px; overflow-y: auto;
     background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 16px 18px; margin-top: 24px;
+    box-shadow: 0 12px 36px rgba(15,40,45,.18); z-index: 40;
+    animation: pop .12s ease;
   }
-  .panel h2 {
-    font-family: var(--ff); font-weight: 600; font-size: 15px; margin: 0 0 2px;
+  .popup-header {
+    font-family: var(--fs); font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+    padding: 12px 14px 8px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 6px;
   }
-  .panel .panel-sub { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+  .popup-body { padding: 6px 0; }
+  .popup-item {
+    display: flex; flex-direction: column; gap: 1px; padding: 8px 14px;
+    font-size: 12px; cursor: pointer; transition: .08s;
+  }
+  .popup-item:hover { background: var(--paper); }
+  .popup-item-head { display: flex; align-items: baseline; gap: 8px; }
+  .popup-item-date { font-weight: 600; font-size: 11px; color: var(--ink); white-space: nowrap; }
+  .popup-item-detail { flex: 1; color: var(--ink); }
+  .popup-item-detail .pw { font-weight: 600; }
+  .popup-item-meta { color: var(--muted); font-size: 10.5px; white-space: nowrap; }
+  .popup-item-sub { color: var(--muted); font-size: 11px; }
+  .popup-item-tag { font-size: 10px; font-weight: 600; color: var(--tbd); }
+  .popup-section-label {
+    font-family: var(--fs); font-weight: 600; font-size: 10px;
+    text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+    padding: 10px 14px 4px; display: flex; align-items: center; gap: 5px;
+  }
+  .popup-section-label .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .popup-empty { color: var(--muted); font-style: italic; font-size: 12px; padding: 14px; }
+  .popup-divider { border: none; border-top: 1px solid var(--line); margin: 0; }
+  .clearlog {
+    display: block; width: 100%; text-align: center;
+    font-family: var(--fs); font-size: 11px; color: var(--muted);
+    background: none; border: none; border-top: 1px solid var(--line);
+    cursor: pointer; padding: 8px 14px; transition: .1s;
+  }
+  .clearlog:hover { color: var(--ink); background: var(--paper); }
+
+  /* ---------- Changelog items inside popup ---------- */
   .log-item {
-    display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line);
-    font-size: 12px;
+    display: flex; gap: 8px; padding: 7px 14px; font-size: 12px;
+    border-bottom: 1px solid var(--line); align-items: baseline;
   }
-  .log-item:first-of-type { border-top: none; }
+  .log-item:last-of-type { border-bottom: none; }
   .log-when {
-    font-family: var(--fs); font-weight: 500; font-size: 11px; color: var(--muted);
-    white-space: nowrap; min-width: 80px;
+    font-family: var(--fs); font-weight: 500; font-size: 10.5px; color: var(--muted);
+    white-space: nowrap; min-width: 55px;
   }
   .log-who {
-    font-family: var(--fs); font-weight: 600; font-size: 11.5px; color: var(--ink);
-    white-space: nowrap; min-width: 60px;
+    font-family: var(--fs); font-weight: 600; font-size: 11px; color: var(--ink);
+    white-space: nowrap;
   }
   .log-anon { color: var(--muted); font-style: italic; font-weight: 400; }
-  .log-what { flex: 1; }
+  .log-what { flex: 1; font-size: 11.5px; }
   .log-what b { font-weight: 600; }
-  .log-empty { color: var(--muted); font-style: italic; font-size: 12px; }
+  .log-empty { color: var(--muted); font-style: italic; font-size: 12px; padding: 14px; }
   .signin-sub { margin: 4px 0 6px; color: var(--muted); font-size: 12px; }
-  .clearlog {
-    margin-top: 10px; font-family: var(--fs); font-size: 11px; color: var(--muted);
-    background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0;
-  }
-  .clearlog:hover { color: var(--ink); }
-  .foot { display: none; }
 
   /* ---------- Modal ---------- */
   .backdrop {
@@ -308,79 +357,6 @@
   .hl-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 
   /* ---------- Main layout ---------- */
-  .main-layout {
-    display: grid; grid-template-columns: 1fr 240px; gap: 24px; align-items: start;
-  }
-  .sidebar { position: sticky; top: 20px; }
-  .sidebar-panel {
-    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 14px 16px;
-  }
-  .sidebar-panel h3 {
-    font-family: var(--fs); font-weight: 600; font-size: 12px; margin: 0 0 10px;
-    text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
-    display: flex; align-items: center; gap: 6px;
-  }
-  .sidebar-panel h3 .badge {
-    font-size: 10px; font-weight: 700; background: var(--tbd); color: #fff;
-    padding: 1px 5px; border-radius: 4px; min-width: 16px; text-align: center;
-  }
-  .sidebar-item {
-    display: flex; flex-direction: column; gap: 1px; padding: 7px 0;
-    border-bottom: 1px solid var(--line); cursor: pointer; transition: .1s;
-    font-size: 12px;
-  }
-  .sidebar-item:last-child { border-bottom: none; }
-  .sidebar-item:hover { color: var(--b); }
-  .sidebar-item-date { font-weight: 600; font-size: 11.5px; color: var(--ink); }
-  .sidebar-item-detail { color: var(--muted); font-size: 11px; }
-  .sidebar-item-assignee { font-size: 10px; font-weight: 600; color: var(--tbd); }
-  .sidebar-empty { color: var(--muted); font-style: italic; font-size: 12px; padding: 2px 0; }
-
-  @media (max-width: 900px) {
-    .main-layout { grid-template-columns: 1fr; }
-    .sidebar { position: static; }
-  }
-
-  /* ---------- Activity ---------- */
-  .activity {
-    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 12px 16px; margin-bottom: 20px;
-  }
-  .activity-header {
-    display: flex; align-items: center; gap: 6px; cursor: pointer;
-    font-family: var(--fs); font-weight: 600; font-size: 12px;
-    text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
-  }
-  .activity-header .badge {
-    font-size: 10px; font-weight: 700; background: #c0392b; color: #fff;
-    padding: 1px 5px; border-radius: 4px; min-width: 16px; text-align: center;
-    letter-spacing: 0;
-  }
-  .activity-header .chevron {
-    margin-left: auto; font-size: 14px; transition: .15s; color: var(--muted);
-  }
-  .activity-body { margin-top: 10px; }
-  .activity.collapsed .activity-body { display: none; }
-  .activity.collapsed .chevron { transform: rotate(-90deg); }
-  .act-section { margin-bottom: 12px; }
-  .act-section:last-child { margin-bottom: 0; }
-  .act-heading {
-    font-family: var(--fs); font-weight: 600; font-size: 10px;
-    text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
-    margin: 0 0 4px; display: flex; align-items: center; gap: 5px;
-  }
-  .act-heading .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-  .act-item {
-    display: flex; align-items: baseline; gap: 8px; padding: 4px 0;
-    font-size: 12px; border-bottom: 1px solid var(--line); cursor: pointer; transition: .1s;
-  }
-  .act-item:last-child { border-bottom: none; }
-  .act-item:hover { color: var(--b); }
-  .act-date { font-weight: 600; font-size: 11px; color: var(--ink); white-space: nowrap; min-width: 55px; }
-  .act-detail { flex: 1; color: var(--ink); }
-  .act-detail .act-who { font-weight: 600; }
-  .act-meta { color: var(--muted); font-size: 10.5px; white-space: nowrap; }
   .assignee-tag {
     font-family: var(--fs); font-size: 8.5px; font-weight: 600;
     padding: 1px 5px; border-radius: 4px;
@@ -431,9 +407,8 @@
     .note-text { font-size: 8.5px; -webkit-line-clamp: 2; }
     .note-dot { width: 14px; height: 14px; right: 3px; bottom: 3px; }
     .note-dot svg { width: 8px; height: 8px; }
-    .btn { font-size: 11px; padding: 5px 10px; }
-    .panel { padding: 12px 14px; }
-    .log-item { font-size: 11px; gap: 6px; }
+    .btn, .tb-icon { font-size: 11px; padding: 5px 10px; }
+    .popup { width: min(340px, 92vw); right: -10px; }
   }
 
   @media (max-width: 480px) {
@@ -443,7 +418,7 @@
     .chip { font-size: 10px; padding: 2px 6px; }
     .chip i { width: 7px; height: 7px; }
     .toolbar { padding: 8px 0 12px; }
-    .btn { font-size: 10.5px; padding: 5px 8px; border-radius: 6px; }
+    .btn, .tb-icon { font-size: 10.5px; padding: 5px 8px; border-radius: 6px; }
     .month-name { font-size: 15px; }
     .dow { font-size: 9px; }
     .grid { gap: 2px; }
@@ -454,9 +429,9 @@
     .time { font-size: 9px; }
     .note-text { font-size: 8px; -webkit-line-clamp: 2; padding-right: 14px; }
     .resolve { font-size: 8px; padding: 2px 6px; }
-    .panel { border-radius: 8px; margin-top: 16px; }
-    .panel h2 { font-size: 14px; }
-    .log-item { flex-direction: column; gap: 1px; padding: 6px 0; font-size: 11px; }
+    .popup { width: min(300px, 90vw); }
+    .popup-item { padding: 6px 12px; font-size: 11px; }
+    .log-item { flex-direction: column; gap: 1px; padding: 6px 12px; font-size: 11px; }
     .log-when, .log-who { min-width: auto; }
     .modal { padding: 18px 16px 14px; border-radius: 10px; }
     .modal h3 { font-size: 18px; }
@@ -1121,21 +1096,14 @@ function render(){
       ${mp ? `<button class="btn ${highlightMine?"on":""}" id="hl-toggle"><span class="hl-dot" style="background:var(--${mp.toLowerCase()})"></span>${highlightMine ? "My days" : "Highlight"}</button>` : ""}
       ${pushSupported && authUser ? `<button class="btn ${pushSubscription?"on":""}" id="notif-toggle">${pushSubscription ? "🔔 On" : "🔕 Notify"}</button>` : ""}
       <span class="spacer"></span>
+      <div class="tb-group" id="tg-activity"></div>
+      <div class="tb-group" id="tg-comments"></div>
+      <div class="tb-group" id="tg-unresolved"></div>
+      <div class="tb-group" id="tg-changelog"></div>
       <button class="btn btn-ghost" id="reset" title="Reset to original schedule">Reset</button>
     </div>
 
-    <div id="activity"></div>
-    <div class="main-layout">
-      <div id="months"></div>
-      <aside class="sidebar" id="sidebar"></aside>
-    </div>
-
-    <section class="panel">
-      <h2>Changelog</h2>
-      <p class="panel-sub">Schedule changes, newest first.</p>
-      <div id="log"></div>
-      <button class="clearlog" id="clearlog">Clear log</button>
-    </section>
+    <div id="months"></div>
   `;
 
   // Months
@@ -1230,100 +1198,153 @@ function render(){
     monthsWrap.appendChild(sec);
   });
 
-  // Activity panel (unseen chats + recent changes — NOT unresolved dates)
-  const actWrap = root.querySelector("#activity");
+  // --- Compute data for toolbar popups ---
   const unresolvedDates = Object.entries(data)
     .filter(([k,v]) => inRange(k) && v.unresolved && k >= TODAY)
     .sort(([a],[b]) => a.localeCompare(b));
   const recentChanges = log
     .filter(item => item.who && item.who !== viewer)
     .slice(0, 5);
-  // Group unseen chats by date
   const unseenByDate = {};
   unseenChats.forEach(m => {
     if (!unseenByDate[m.date_key]) unseenByDate[m.date_key] = [];
     unseenByDate[m.date_key].push(m);
   });
   const unseenDateKeys = Object.keys(unseenByDate).sort();
+  const activityCount = unseenDateKeys.length + recentChanges.length;
+  const chatCount = unseenDateKeys.length;
+  const unresCount = unresolvedDates.length;
 
-  const activityItems = unseenDateKeys.length + recentChanges.length;
-  if (activityItems > 0) {
-    const collapsed = localStorage.getItem("cocal.actCollapsed") === "1";
-    const panel = el(`<div class="activity${collapsed ? " collapsed" : ""}"></div>`);
+  // Helper: close all open popups
+  function closePopups() { root.querySelectorAll(".popup").forEach(p => p.remove()); }
 
-    // Collapsible header
-    const header = el(`<div class="activity-header">Activity <span class="badge">${activityItems}</span><span class="chevron">▾</span></div>`);
-    header.addEventListener("click", () => {
-      panel.classList.toggle("collapsed");
-      try { localStorage.setItem("cocal.actCollapsed", panel.classList.contains("collapsed") ? "1" : "0"); } catch(e){}
-    });
-    panel.appendChild(header);
+  // Helper: toggle a popup under a toolbar group
+  function togglePopup(groupId, buildFn) {
+    const group = root.querySelector("#" + groupId);
+    const existing = group.querySelector(".popup");
+    closePopups();
+    if (existing) return; // was open, now closed
+    const popup = buildFn();
+    group.appendChild(popup);
+    // Close on outside click
+    const handler = (e) => {
+      if (!group.contains(e.target)) { popup.remove(); document.removeEventListener("click", handler, true); }
+    };
+    setTimeout(() => document.addEventListener("click", handler, true), 0);
+  }
 
-    // Body
-    const body = el(`<div class="activity-body"></div>`);
+  // SVG icons for toolbar
+  const svgActivity = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12v12H4z"/><path d="M8 2v4M12 2v4M4 8h12"/></svg>`;
+  const svgChat = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h14v9H7l-4 3V4z"/></svg>`;
+  const svgUnres = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.5"/><path d="M8 8a2.5 2.5 0 0 1 4.3 1.7c0 1.3-2.3 1.3-2.3 2.8"/><circle cx="10" cy="15" r=".8" fill="currentColor"/></svg>`;
+  const svgLog = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h10M5 8h10M5 12h7M5 16h4"/></svg>`;
 
-    // Unseen chats
-    if (unseenDateKeys.length) {
-      const sec = el(`<div class="act-section"></div>`);
-      sec.appendChild(el(`<p class="act-heading"><span class="dot" style="background:#c0392b"></span> New messages</p>`));
+  // ---- Activity icon ----
+  const tgAct = root.querySelector("#tg-activity");
+  const actBtn = el(`<button class="tb-icon ${activityCount?"has-items":"" }" title="Activity">${svgActivity}${activityCount ? `<span class="tb-badge tb-badge-red">${activityCount}</span>` : ""}</button>`);
+  actBtn.addEventListener("click", () => togglePopup("tg-activity", () => {
+    const p = el(`<div class="popup"></div>`);
+    p.appendChild(el(`<div class="popup-header">Activity</div>`));
+    const body = el(`<div class="popup-body"></div>`);
+    if (!activityCount) { body.appendChild(el(`<div class="popup-empty">No new activity</div>`)); }
+    else {
+      if (unseenDateKeys.length) {
+        body.appendChild(el(`<div class="popup-section-label"><span class="dot" style="background:#c0392b"></span> New messages</div>`));
+        unseenDateKeys.forEach(dk => {
+          const msgs = unseenByDate[dk];
+          const last = msgs[0];
+          const item = el(`<div class="popup-item"><div class="popup-item-head"><span class="popup-item-date">${shortDate(dk)}</span><span class="popup-item-detail"><span class="pw">${escapeHtml(last.user_name)}</span>: ${escapeHtml(last.message.slice(0,50))}${last.message.length>50?"…":""}</span><span class="popup-item-meta">${msgs.length > 1 ? msgs.length + " msgs" : ""}</span></div></div>`);
+          item.addEventListener("click", () => { closePopups(); openEditor(dk); });
+          body.appendChild(item);
+        });
+      }
+      if (recentChanges.length) {
+        if (unseenDateKeys.length) body.appendChild(el(`<hr class="popup-divider">`));
+        body.appendChild(el(`<div class="popup-section-label"><span class="dot" style="background:var(--b)"></span> Recent changes</div>`));
+        recentChanges.forEach(item => {
+          body.appendChild(el(`<div class="popup-item" style="cursor:default"><div class="popup-item-head"><span class="popup-item-date">${prettyTs(item.ts).split(",")[0]}</span><span class="popup-item-detail"><span class="pw">${escapeHtml(item.who)}</span>: ${escapeHtml(item.text.slice(0,60))}</span></div></div>`));
+        });
+      }
+    }
+    p.appendChild(body);
+    return p;
+  }));
+  tgAct.appendChild(actBtn);
+
+  // ---- Comments icon ----
+  const tgChat = root.querySelector("#tg-comments");
+  const chatBtn = el(`<button class="tb-icon ${chatCount?"has-items":""}" title="Comments">${svgChat}${chatCount ? `<span class="tb-badge tb-badge-blue">${chatCount}</span>` : ""}</button>`);
+  chatBtn.addEventListener("click", () => togglePopup("tg-comments", () => {
+    const p = el(`<div class="popup"></div>`);
+    p.appendChild(el(`<div class="popup-header">Comments</div>`));
+    const body = el(`<div class="popup-body"></div>`);
+    if (!chatCount) { body.appendChild(el(`<div class="popup-empty">No new comments</div>`)); }
+    else {
       unseenDateKeys.forEach(dk => {
         const msgs = unseenByDate[dk];
-        const last = msgs[0];
-        const item = el(`<div class="act-item"><span class="act-date">${shortDate(dk)}</span><span class="act-detail"><span class="act-who">${escapeHtml(last.user_name)}</span>: ${escapeHtml(last.message.slice(0,60))}${last.message.length>60?"…":""}</span><span class="act-meta">${msgs.length > 1 ? msgs.length + " msgs" : "1 msg"}</span></div>`);
-        item.addEventListener("click", () => openEditor(dk));
-        sec.appendChild(item);
+        body.appendChild(el(`<div class="popup-section-label">${shortDate(dk)}</div>`));
+        msgs.forEach(m => {
+          const item = el(`<div class="popup-item"><div class="popup-item-head"><span class="popup-item-detail"><span class="pw">${escapeHtml(m.user_name)}</span>: ${escapeHtml(m.message.slice(0,70))}${m.message.length>70?"…":""}</span></div><span class="popup-item-sub">${prettyTs(m.created_at)}</span></div>`);
+          item.addEventListener("click", () => { closePopups(); openEditor(dk); });
+          body.appendChild(item);
+        });
       });
-      body.appendChild(sec);
     }
+    p.appendChild(body);
+    return p;
+  }));
+  tgChat.appendChild(chatBtn);
 
-    // Recent changes by other user
-    if (recentChanges.length) {
-      const sec = el(`<div class="act-section"></div>`);
-      sec.appendChild(el(`<p class="act-heading"><span class="dot" style="background:var(--b)"></span> Recent changes</p>`));
-      recentChanges.forEach(item => {
-        sec.appendChild(el(`<div class="act-item" style="cursor:default"><span class="act-date">${prettyTs(item.ts).split(",")[0]}</span><span class="act-detail"><span class="act-who">${escapeHtml(item.who)}</span>: ${escapeHtml(item.text.slice(0,80))}</span></div>`));
+  // ---- Unresolved icon ----
+  const tgUnres = root.querySelector("#tg-unresolved");
+  const unresBtn = el(`<button class="tb-icon ${unresCount?"has-items":""}" title="Unresolved dates">${svgUnres}${unresCount ? `<span class="tb-badge tb-badge-amber">${unresCount}</span>` : ""}</button>`);
+  unresBtn.addEventListener("click", () => togglePopup("tg-unresolved", () => {
+    const p = el(`<div class="popup"></div>`);
+    p.appendChild(el(`<div class="popup-header">Unresolved</div>`));
+    const body = el(`<div class="popup-body"></div>`);
+    if (!unresCount) { body.appendChild(el(`<div class="popup-empty">All dates resolved</div>`)); }
+    else {
+      unresolvedDates.forEach(([dk, v]) => {
+        const who = v.parent ? (PMETA[v.parent]?.label || v.parent) : "Unassigned";
+        const item = el(`<div class="popup-item"></div>`);
+        item.appendChild(el(`<span class="popup-item-date">${shortDate(dk)} · ${who}</span>`));
+        if (v.notes && v.notes.trim()) {
+          const preview = v.notes.trim().length > 50 ? v.notes.trim().slice(0,50) + "…" : v.notes.trim();
+          item.appendChild(el(`<span class="popup-item-sub">${escapeHtml(preview)}</span>`));
+        }
+        if (v.assignee) item.appendChild(el(`<span class="popup-item-tag">→ ${escapeHtml(v.assignee)}</span>`));
+        item.addEventListener("click", () => { closePopups(); openEditor(dk); });
+        body.appendChild(item);
       });
-      body.appendChild(sec);
     }
+    p.appendChild(body);
+    return p;
+  }));
+  tgUnres.appendChild(unresBtn);
 
-    panel.appendChild(body);
-    actWrap.appendChild(panel);
-  }
-
-  // Right sidebar — unresolved dates
-  const sidebarWrap = root.querySelector("#sidebar");
-  const sidePanel = el(`<div class="sidebar-panel"></div>`);
-  sidePanel.appendChild(el(`<h3>Unresolved ${unresolvedDates.length ? `<span class="badge">${unresolvedDates.length}</span>` : ""}</h3>`));
-  if (unresolvedDates.length) {
-    unresolvedDates.forEach(([dk, v]) => {
-      const who = v.parent ? (PMETA[v.parent]?.label || v.parent) : "Unassigned";
-      const item = el(`<div class="sidebar-item"></div>`);
-      item.appendChild(el(`<span class="sidebar-item-date">${shortDate(dk)} · ${who}</span>`));
-      if (v.notes && v.notes.trim()) {
-        const preview = v.notes.trim().length > 50 ? v.notes.trim().slice(0,50) + "…" : v.notes.trim();
-        item.appendChild(el(`<span class="sidebar-item-detail">${escapeHtml(preview)}</span>`));
-      }
-      if (v.assignee) item.appendChild(el(`<span class="sidebar-item-assignee">→ ${escapeHtml(v.assignee)}</span>`));
-      item.addEventListener("click", () => openEditor(dk));
-      sidePanel.appendChild(item);
-    });
-  } else {
-    sidePanel.appendChild(el(`<span class="sidebar-empty">All dates resolved ✓</span>`));
-  }
-  sidebarWrap.appendChild(sidePanel);
-
-  // Changelog
-  const logWrap = root.querySelector("#log");
-  if (!log.length) {
-    logWrap.appendChild(el(`<p class="log-empty">No changes yet.</p>`));
-  } else {
-    log.forEach(item => {
-      const whoLabel = item.who ? escapeHtml(item.who) : "<span class='log-anon'>(before sign-in)</span>";
-      logWrap.appendChild(el(
-        `<div class="log-item"><span class="log-when">${prettyTs(item.ts)}</span><span class="log-who">${whoLabel}</span><span class="log-what">${escapeHtml(item.text)}</span></div>`
-      ));
-    });
-  }
+  // ---- Changelog icon ----
+  const tgLog = root.querySelector("#tg-changelog");
+  const logBtn = el(`<button class="tb-icon" title="Changelog">${svgLog}</button>`);
+  logBtn.addEventListener("click", () => togglePopup("tg-changelog", () => {
+    const p = el(`<div class="popup"></div>`);
+    p.appendChild(el(`<div class="popup-header">Changelog</div>`));
+    const body = el(`<div class="popup-body"></div>`);
+    if (!log.length) { body.appendChild(el(`<div class="popup-empty">No changes yet</div>`)); }
+    else {
+      log.slice(0, 15).forEach(item => {
+        const whoLabel = item.who ? escapeHtml(item.who) : "<span class='log-anon'>anon</span>";
+        body.appendChild(el(
+          `<div class="log-item"><span class="log-when">${prettyTs(item.ts)}</span><span class="log-who">${whoLabel}</span><span class="log-what">${escapeHtml(item.text)}</span></div>`
+        ));
+      });
+    }
+    p.appendChild(body);
+    const clr = el(`<button class="clearlog" id="clearlog">Clear log</button>`);
+    clr.addEventListener("click", () => { clearLog(); closePopups(); });
+    p.appendChild(clr);
+    return p;
+  }));
+  tgLog.appendChild(logBtn);
 
   // Wire toolbar
   root.querySelector("#ics").addEventListener("click", downloadICS);
@@ -1333,7 +1354,6 @@ function render(){
   if (hlBtn) hlBtn.addEventListener("click", toggleHighlight);
   const notifBtn = root.querySelector("#notif-toggle");
   if (notifBtn) notifBtn.addEventListener("click", () => pushSubscription ? unsubscribePush() : subscribePush());
-  root.querySelector("#clearlog").addEventListener("click", clearLog);
 
   if (signingIn) renderSignIn();
   if (editingKey) renderEditor(editingKey);

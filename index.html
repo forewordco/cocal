@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="theme-color" content="#1d2a2f" />
-<title>Summer Co-Parenting Calendar</title>
+<title>CoCal</title>
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" type="image/svg+xml" href="icon.svg" />
 <link rel="apple-touch-icon" href="icon-192.png" />
@@ -55,37 +55,65 @@
   .wrap {
     width: min(96vw, 1440px);
     margin: 0 auto;
-    padding: 20px clamp(10px, 2.5vw, 32px) 60px;
+    padding: 20px clamp(10px, 2.5vw, 32px) 56px;
   }
 
   /* ---------- Header ---------- */
   header.top {
-    display: flex; flex-wrap: wrap; align-items: center;
-    gap: 8px 16px;
-    padding-bottom: 14px; margin-bottom: 6px;
+    display: flex; align-items: center;
+    gap: 10px;
+    padding-bottom: 14px; margin-bottom: 10px;
     border-bottom: 1.5px solid var(--line);
+  }
+  .logo {
+    display: flex; align-items: center; gap: 8px;
+    text-decoration: none; color: var(--ink); flex-shrink: 0;
+  }
+  .logo-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--b) 0%, var(--b) 45%, var(--a) 55%, var(--a) 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-family: var(--ff); font-weight: 700; font-size: 14px;
+    letter-spacing: -0.03em; flex-shrink: 0;
+    position: relative; overflow: hidden;
+  }
+  .logo-icon::after {
+    content: ""; position: absolute;
+    width: 14px; height: 14px; border-radius: 3px;
+    background: rgba(255,255,255,.25);
+    top: 3px; left: 3px;
   }
   .title {
     font-family: var(--ff); font-weight: 700;
-    font-size: clamp(22px, 4vw, 32px); line-height: 1; margin: 0;
-    letter-spacing: -0.025em;
-  }
-  .subtitle { color: var(--muted); font-size: 13px; letter-spacing: .01em; }
-  .legend {
-    display: flex; flex-wrap: wrap; gap: 6px;
-    align-items: center;
+    font-size: clamp(20px, 3.5vw, 26px); line-height: 1; margin: 0;
+    letter-spacing: -0.03em;
   }
   .hdr-right {
     display: flex; align-items: center; gap: 6px;
     margin-left: auto;
   }
+
+  /* ---------- Bottom stat bar ---------- */
+  .bottombar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--card); border-top: 1px solid var(--line);
+    z-index: 30; padding: 0;
+    display: flex; justify-content: center;
+    box-shadow: 0 -2px 12px rgba(20,50,60,.06);
+  }
+  .bottombar-inner {
+    display: flex; align-items: center; justify-content: center;
+    gap: 2px; padding: 7px 12px;
+    width: min(96vw, 1440px);
+  }
   .chip {
     display: inline-flex; align-items: center; gap: 5px;
-    font-family: var(--fs); font-weight: 500; font-size: 11.5px;
-    padding: 3px 9px; border-radius: 6px; background: transparent;
+    font-family: var(--fs); font-weight: 500; font-size: 11px;
+    padding: 4px 10px; border-radius: 6px; background: transparent;
     border: none; color: var(--muted); white-space: nowrap;
   }
-  .chip i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+  .chip i { width: 7px; height: 7px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+  .chip .chip-n { font-weight: 700; color: var(--ink); font-size: 12px; }
   .sw-b { background: var(--b); }
   .sw-a { background: var(--a); }
   .sw-t { background: linear-gradient(135deg, var(--b) 40%, var(--a) 60%); }
@@ -459,8 +487,9 @@
   /* ---------- Responsive ---------- */
   @media (max-width: 768px) {
     .wrap { padding: 16px clamp(6px, 2vw, 16px) 50px; }
-    .title { font-size: clamp(20px, 5vw, 28px); }
-    .legend { margin-left: 0; margin-top: 4px; width: 100%; }
+    .title { font-size: clamp(18px, 4.5vw, 24px); }
+    .logo-icon { width: 26px; height: 26px; font-size: 12px; border-radius: 6px; }
+    .logo-icon::after { width: 12px; height: 12px; }
     .grid { gap: 3px; }
     .cell { min-height: 80px; padding: 5px 5px; border-radius: 6px; }
     .daynum { font-size: 12px; }
@@ -471,14 +500,17 @@
     .note-dot svg { width: 8px; height: 8px; }
     .btn, .tb-icon { font-size: 11px; padding: 5px 10px; }
     .popup { width: min(340px, 92vw); right: -10px; }
+    .chip { font-size: 10px; padding: 3px 7px; }
+    .chip i { width: 6px; height: 6px; }
   }
 
   @media (max-width: 480px) {
-    .wrap { padding: 12px 6px 40px; }
-    .title { font-size: clamp(19px, 5.5vw, 26px); }
-    .subtitle { font-size: 11px; }
-    .chip { font-size: 10px; padding: 2px 6px; }
-    .chip i { width: 7px; height: 7px; }
+    .wrap { padding: 12px 6px 44px; }
+    .title { font-size: clamp(17px, 5vw, 22px); }
+    .logo-icon { width: 24px; height: 24px; font-size: 11px; border-radius: 5px; }
+    .logo-icon::after { width: 10px; height: 10px; top: 2px; left: 2px; }
+    .chip { font-size: 9.5px; padding: 2px 6px; }
+    .chip i { width: 6px; height: 6px; }
     .btn, .tb-icon { font-size: 10.5px; padding: 5px 8px; border-radius: 6px; }
     .month-name { font-size: 15px; }
     .dow { font-size: 9px; }
@@ -1139,15 +1171,9 @@ function render(){
 
   root.innerHTML = `
     <header class="top">
-      <h1 class="title">Summer Co-Parenting</h1>
-      <p class="subtitle">May 25 – Sep 7 · 2026</p>
-      <div class="legend">
-        <span class="chip"><i class="sw-b"></i> Bobby ${b}</span>
-        <span class="chip"><i class="sw-a"></i> Allie ${a}</span>
-        ${ba?`<span class="chip"><i class="sw-a" style="background:var(--ba)"></i> Both ${ba}</span>`:""}
-        ${tbd?`<span class="chip"><i class="sw-tbd"></i> TBD ${tbd}</span>`:""}
-        ${tCount?`<span class="chip"><i class="sw-t"></i> Trans ${tCount}</span>`:""}
-        ${q?`<span class="chip"><i class="sw-q"></i> Unres ${q}</span>`:""}
+      <div class="logo">
+        <div class="logo-icon">C</div>
+        <h1 class="title">CoCal</h1>
       </div>
       <div class="hdr-right">
         <div class="tb-group" id="tg-activity"></div>
@@ -1158,6 +1184,17 @@ function render(){
     </header>
 
     <div id="months"></div>
+
+    <div class="bottombar">
+      <div class="bottombar-inner">
+        <span class="chip"><i class="sw-b"></i> Bobby <span class="chip-n">${b}</span></span>
+        <span class="chip"><i class="sw-a"></i> Allie <span class="chip-n">${a}</span></span>
+        ${ba?`<span class="chip"><i class="sw-a" style="background:var(--ba)"></i> Both <span class="chip-n">${ba}</span></span>`:""}
+        ${tbd?`<span class="chip"><i class="sw-tbd"></i> TBD <span class="chip-n">${tbd}</span></span>`:""}
+        ${tCount?`<span class="chip"><i class="sw-t"></i> Trans <span class="chip-n">${tCount}</span></span>`:""}
+        ${q?`<span class="chip"><i class="sw-q"></i> Unres <span class="chip-n">${q}</span></span>`:""}
+      </div>
+    </div>
   `;
 
   // Months

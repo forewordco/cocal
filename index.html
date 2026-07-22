@@ -759,6 +759,7 @@ let editingKey = null;
 let signingIn = false;
 let ready = false;
 let _saving = false;
+let _scrolledToToday = false;
 let highlightMine = false;
 try { highlightMine = localStorage.getItem("cocal.highlight") === "1"; } catch(e){}
 
@@ -1375,6 +1376,8 @@ function render(){
     const dim = new Date(y,m+1,0).getDate();
     const anyIn = Array.from({length:dim},(_,i)=>ymd(y,m,i+1)).some(inRange);
     if (!anyIn) return;
+    const lastDay = ymd(y, m, dim);
+    if (lastDay < TODAY) return;
 
     const sec = el(`<section class="month"></section>`);
     sec.appendChild(el(`<h2 class="month-name">${MONTH_NAMES[m]} <span>${y}</span></h2>`));
@@ -1460,6 +1463,11 @@ function render(){
     sec.appendChild(grid);
     monthsWrap.appendChild(sec);
   });
+
+  if (!_scrolledToToday) {
+    const todayCell = root.querySelector(".cell.today");
+    if (todayCell) { _scrolledToToday = true; requestAnimationFrame(() => todayCell.scrollIntoView({block:"center",behavior:"instant"})); }
+  }
 
   // --- Compute data for toolbar popups ---
   const unresolvedDates = Object.entries(data)

@@ -627,11 +627,21 @@ function sbHeaders() {
 }
 
 const RANGE_START = "2026-05-25";   // Memorial Day 2026
-const RANGE_END   = "2026-09-07";   // Labor Day 2026
 
-const MONTHS = [
-  {y:2026,m:4},{y:2026,m:5},{y:2026,m:6},{y:2026,m:7},{y:2026,m:8}
-];
+function buildMonths() {
+  const s = new Date(RANGE_START + "T00:00:00");
+  const n = new Date();
+  const horizon = new Date(n.getFullYear(), n.getMonth() + 4, 1);
+  const months = [];
+  let y = s.getFullYear(), m = s.getMonth();
+  while (new Date(y, m, 1) < horizon) {
+    months.push({y, m});
+    m++;
+    if (m > 11) { m = 0; y++; }
+  }
+  return months;
+}
+const MONTHS = buildMonths();
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const PMETA = { B:{label:"Bobby",short:"B"}, A:{label:"Allie",short:"A"}, BA:{label:"Both",short:"B+A"}, TBD:{label:"TBD",short:"TBD"} };
@@ -1158,7 +1168,7 @@ function startRealtime() {
 
 // ---------- Date helpers ----------
 function ymd(y,m,d){ return y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0"); }
-function inRange(k){ return k >= RANGE_START && k <= RANGE_END; }
+function inRange(k){ return k >= RANGE_START; }
 function prettyDate(k){
   const d = new Date(k+"T00:00:00");
   return d.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
@@ -1176,26 +1186,22 @@ function prettyTs(ts){
 function computeTransitions(){
   const map = {};
   let prev = null;
-  let w = new Date(RANGE_START+"T00:00:00");
-  const end = new Date(RANGE_END+"T00:00:00");
-  while (w <= end) {
-    const k = ymd(w.getFullYear(), w.getMonth(), w.getDate());
+  const keys = Object.keys(data).filter(k => k >= RANGE_START).sort();
+  keys.forEach(k => {
     const e = data[k];
     const cur = (e && e.parent) || null;
     if (cur) {
       if (prev && prev !== cur && !(e && e.unresolved)) map[k] = { from: prev, to: cur };
       prev = cur;
     }
-    w.setDate(w.getDate()+1);
-  }
+  });
   return map;
 }
 
 function findNextParent(k) {
   const d = new Date(k + "T00:00:00");
-  const end = new Date(RANGE_END + "T00:00:00");
   d.setDate(d.getDate() + 1);
-  while (d <= end) {
+  for (let i = 0; i < 90; i++) {
     const key = ymd(d.getFullYear(), d.getMonth(), d.getDate());
     const entry = data[key];
     if (entry && entry.parent && entry.parent !== "BA" && entry.parent !== "TBD") return entry.parent;
@@ -1498,7 +1504,12 @@ function render(){
   // ---- Activity icon ----
   const tgAct = root.querySelector("#tg-activity");
   const actBtn = el(`<button class="tb-icon ${activityCount?"has-items":""}" title="Activity">${svgActivity}${activityCount ? `<span class="tb-badge tb-badge-red">${activityCount}</span>` : ""}</button>`);
-  actBtn.addEventListener("click", () => togglePopup("tg-activity", () => {
+  actBtn.addEventListener("click", () => {
+    updateLastSeen();
+    const badge = actBtn.querySelector(".tb-badge");
+    if (badge) badge.remove();
+    actBtn.classList.remove("has-items");
+    togglePopup("tg-activity", () => {
     const p = el(`<div class="popup"></div>`);
     p.appendChild(el(`<div class="popup-header">Activity</div>`));
     const body = el(`<div class="popup-body"></div>`);
@@ -1528,7 +1539,8 @@ function render(){
     logLink.addEventListener("click", () => { closePopups(); showChangelogPage(); });
     p.appendChild(logLink);
     return p;
-  }));
+  });
+  });
   tgAct.appendChild(actBtn);
 
   // ---- Comments icon ----
@@ -2036,7 +2048,6 @@ async function boot() {
   await loadFromRemote();
   if (authUser) await loadUnseenChats();
   render();   // re-render with activity panel data
-  updateLastSeen();
   startRealtime();
 }
 boot();

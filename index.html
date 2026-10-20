@@ -236,6 +236,25 @@
   }
   .resolve:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
 
+  /* ---------- Template Preview ---------- */
+  .month-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .template-btn {
+    font-family: var(--fs); font-weight: 600; font-size: 10px;
+    padding: 3px 10px; border-radius: 5px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--muted);
+    transition: .12s; letter-spacing: .01em;
+  }
+  .template-btn:hover { border-color: #b8c4c4; color: var(--ink); }
+  .template-btn-approve { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .template-btn-approve:hover { background: #2c3f46; }
+  .template-btn-flip { background: var(--purple-soft); color: var(--purple); border-color: rgba(109,59,209,.3); }
+  .template-btn-flip:hover { background: var(--ba-tint); }
+  .cell.template-preview {
+    border-style: dashed !important;
+    border-width: 1.5px;
+    opacity: .6;
+  }
+
   /* ---------- Toolbar popups ---------- */
   .tb-group { position: relative; display: inline-flex; }
   .tb-icon {
@@ -760,6 +779,7 @@ let signingIn = false;
 let ready = false;
 let _saving = false;
 let _scrolledToToday = false;
+let _pendingTemplate = {};
 let highlightMine = false;
 try { highlightMine = localStorage.getItem("cocal.highlight") === "1"; } catch(e){}
 
@@ -1336,6 +1356,75 @@ function clearLog(){
   saveLog(); render();
 }
 
+// ---------- Schedule Template ----------
+function _monthKey(y, m) { return y + "-" + String(m + 1).padStart(2, "0"); }
+
+function generateTemplate(y, m, flipped) {
+  const dim = new Date(y, m + 1, 0).getDate();
+  const cells = {};
+  const epoch = new Date(2027, 0, 2).getTime(); // a known Friday
+  for (let d = 1; d <= dim; d++) {
+    const date = new Date(y, m, d);
+    const dow = date.getDay();
+    const k = ymd(y, m, d);
+    if (!inRange(k)) continue;
+    if (dow === 1 || dow === 2) {
+      cells[k] = "B";
+    } else if (dow === 3 || dow === 4) {
+      cells[k] = "A";
+    } else {
+      let fri = dow === 5 ? date : dow === 6 ? new Date(y, m, d - 1) : new Date(y, m, d - 2);
+      const weekNum = Math.floor((fri.getTime() - epoch) / 86400000 / 7) + 10000;
+      let isB = weekNum % 2 === 0;
+      if (flipped) isB = !isB;
+      cells[k] = isB ? "B" : "A";
+    }
+  }
+  return cells;
+}
+
+function isMonthEmpty(y, m) {
+  const dim = new Date(y, m + 1, 0).getDate();
+  for (let d = 1; d <= dim; d++) {
+    const k = ymd(y, m, d);
+    if (inRange(k) && data[k] && data[k].parent) return false;
+  }
+  return true;
+}
+
+function applyTemplatePreview(y, m) {
+  _pendingTemplate[_monthKey(y, m)] = { cells: generateTemplate(y, m, false), flipped: false, y, m };
+  render();
+}
+
+function flipTemplate(y, m) {
+  const mk = _monthKey(y, m);
+  const pt = _pendingTemplate[mk];
+  if (!pt) return;
+  const flipped = !pt.flipped;
+  _pendingTemplate[mk] = { cells: generateTemplate(y, m, flipped), flipped, y, m };
+  render();
+}
+
+function approveTemplate(y, m) {
+  const mk = _monthKey(y, m);
+  const pt = _pendingTemplate[mk];
+  if (!pt) return;
+  Object.entries(pt.cells).forEach(([k, parent]) => {
+    if (!data[k]) data[k] = {};
+    data[k].parent = parent;
+    if (!data[k].notes) data[k].notes = "";
+  });
+  delete _pendingTemplate[mk];
+  saveData(); addLog("Applied schedule template for " + MONTH_NAMES[m] + " " + y + ".");
+  render();
+}
+
+function cancelTemplate(y, m) {
+  delete _pendingTemplate[_monthKey(y, m)];
+  render();
+}
+
 // ---------- Render ----------
 function el(html){ const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
 
@@ -1389,7 +1478,28 @@ function render(){
     if (lastDay < TODAY) return;
 
     const sec = el(`<section class="month"></section>`);
-    sec.appendChild(el(`<h2 class="month-name">${MONTH_NAMES[m]} <span>${y}</span></h2>`));
+    const mk = _monthKey(y, m);
+    const hasPending = !!_pendingTemplate[mk];
+    const monthEmpty = isMonthEmpty(y, m);
+
+    const headerRow = el(`<div class="month-header"></div>`);
+    headerRow.appendChild(el(`<h2 class="month-name">${MONTH_NAMES[m]} <span>${y}</span></h2>`));
+    if (hasPending) {
+      const ab = el(`<button class="template-btn template-btn-approve">Approve</button>`);
+      ab.addEventListener("click", () => approveTemplate(y, m));
+      headerRow.appendChild(ab);
+      const fb = el(`<button class="template-btn template-btn-flip">Flip weekends</button>`);
+      fb.addEventListener("click", () => flipTemplate(y, m));
+      headerRow.appendChild(fb);
+      const cb = el(`<button class="template-btn">Cancel</button>`);
+      cb.addEventListener("click", () => cancelTemplate(y, m));
+      headerRow.appendChild(cb);
+    } else if (monthEmpty) {
+      const tb = el(`<button class="template-btn">Apply template</button>`);
+      tb.addEventListener("click", () => applyTemplatePreview(y, m));
+      headerRow.appendChild(tb);
+    }
+    sec.appendChild(headerRow);
     sec.appendChild(el(`<div class="dow">${DOW.map(d=>`<span>${d}</span>`).join("")}</div>`));
     const grid = el(`<div class="grid"></div>`);
 
@@ -1402,9 +1512,11 @@ function render(){
       if (d === null){ grid.appendChild(el(`<div class="cell empty"></div>`)); return; }
       const k = ymd(y,m,d);
       const active = inRange(k);
-      const e = data[k];
-      const t = trans[k];
-      const unres = e && e.unresolved;
+      const tplParent = hasPending && _pendingTemplate[mk]?.cells[k];
+      const isTemplateCell = !!tplParent;
+      let e = isTemplateCell ? { ...(data[k] || {}), parent: tplParent } : data[k];
+      const t = isTemplateCell ? null : trans[k];
+      const unres = !isTemplateCell && e && e.unresolved;
       // If coming FROM a Both/TBD day, suppress transition — that day already shows the full chain
       const isTrans = !!t && !unres && t.from !== "BA" && t.from !== "TBD";
       // Gradient only for direct B↔A transitions
@@ -1413,7 +1525,7 @@ function render(){
       const isPast = k < TODAY;
       const isToday = k === TODAY;
       const pcls = e&&e.parent==="B"?"c-b":e&&e.parent==="A"?"c-a":e&&e.parent==="BA"?"c-ba":e&&e.parent==="TBD"?"c-tbd":"c-none";
-      const cls = ["cell", active?"active":"out", pcls, unres?"c-unres":"", showGradient?"c-trans":"", isPast?"past":"", isToday?"today":""].join(" ");
+      const cls = ["cell", active?"active":"out", pcls, unres?"c-unres":"", showGradient?"c-trans":"", isPast?"past":"", isToday?"today":"", isTemplateCell?"template-preview":""].join(" ");
 
       const cell = el(`<div class="${cls}" tabindex="${active?0:-1}"></div>`);
 
@@ -1465,7 +1577,7 @@ function render(){
         rb.addEventListener("click", ev => { ev.stopPropagation(); resolveEntry(k); });
         cell.appendChild(rb);
       }
-      if (active) cell.addEventListener("click", ()=>openEditor(k));
+      if (active && !isTemplateCell) cell.addEventListener("click", ()=>openEditor(k));
       grid.appendChild(cell);
     });
 

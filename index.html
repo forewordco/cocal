@@ -1084,19 +1084,28 @@ async function sendMessage(dateKey, text) {
 
 // ---- Remote persistence (Supabase only) ----
 let _syncTimer = null;
+let _syncDirty = false;
 function syncToRemote() {
+  _syncDirty = true;
   clearTimeout(_syncTimer);
   _syncTimer = setTimeout(async () => {
     if (_saving) return;
-    _saving = true;
-    try {
-      await fetch(SB_URL + "/rest/v1/cocal?id=eq.main", {
-        method: "PATCH",
-        headers: sbHeaders(),
-        body: JSON.stringify({ data, log, updated_at: new Date().toISOString() })
-      });
-    } catch(e) { console.error("sync failed", e); }
-    _saving = false;
+    while (_syncDirty) {
+      _syncDirty = false;
+      _saving = true;
+      try {
+        const res = await fetch(SB_URL + "/rest/v1/cocal?id=eq.main", {
+          method: "PATCH",
+          headers: sbHeaders(),
+          body: JSON.stringify({ data, log, updated_at: new Date().toISOString() })
+        });
+        if (res.status === 401) {
+          const ok = await refreshToken();
+          if (ok) { _syncDirty = true; }
+        }
+      } catch(e) { console.error("sync failed", e); _syncDirty = true; }
+      _saving = false;
+    }
   }, 300);
 }
 
@@ -2057,6 +2066,7 @@ async function boot() {
   if (authUser) await loadUnseenChats();
   render();   // re-render with activity panel data
   startRealtime();
+  setInterval(() => { if (authSession) refreshToken(); }, 45 * 60 * 1000);
 }
 boot();
 </script>
